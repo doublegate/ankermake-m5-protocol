@@ -70,10 +70,11 @@ jobs:
         labels: ${{ steps.meta.outputs.labels }}
     
     - name: Create release directory
+      if: startsWith(github.ref, 'refs/tags/')
       run: mkdir release
       
     - name: Zip Release
-      if: github.event_name == 'push'
+      if: startsWith(github.ref, 'refs/tags/')
       uses: TheDoctor0/zip-release@0.7.1
       with:
         type: 'zip'
@@ -81,7 +82,7 @@ jobs:
         exclusions: '*.git* /*release/*'
         
     - name: GZip Release
-      if: github.event_name == 'push'
+      if: startsWith(github.ref, 'refs/tags/')
       uses: TheDoctor0/zip-release@0.7.1
       with:
         type: 'tar'
@@ -89,7 +90,7 @@ jobs:
         exclusions: '*.git* release'
         
     - name: Release
-      if: ${{ github.event_name == 'push' }}
+      if: startsWith(github.ref, 'refs/tags/')
       uses: docker://antonyurchenko/git-release:v5.0.1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
