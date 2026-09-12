@@ -67,5 +67,13 @@ Things that bite when working here:
   `documentation/issue77_code_fix.md` are citations and must stay pointing upstream.**
   Retargeting them to this fork would produce dead links and misattribute the work.
   `.github/FUNDING.yml` likewise still points at the upstream maintainer, deliberately.
+- **`tests/test_print_history.py` is flaky on Python 3.10/3.11.** Intermittent
+  `sqlite3.OperationalError: cannot start a transaction within a transaction` (and
+  `cannot rollback - no transaction is active`) from the `_prune` background thread in
+  `web/service/history.py` racing the test's own connection. Seen as a *failure* on the
+  3.10 CI job and as an unhandled-thread-exception *warning* on 3.13/3.14 locally; a
+  re-run of the identical commit passed. Upstream's own CI is green on the same commit,
+  so treat a lone red 3.10 job here as the race, not as breakage — re-run it, and only
+  investigate if it reproduces. The underlying bug is real and unfixed.
 - **`login.json` is credential material** — its `user_id` works as the MQTT password. It is
   gitignored here; never commit one or paste `config show` output into an issue.
