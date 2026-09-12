@@ -94,6 +94,14 @@
   and no API clears it: `actions/permissions` reports `enabled: true` and `gh workflow enable`
   exits clean while the gate is still shut. The only reliable signal is `total_count: 0` from
   `gh api repos/OWNER/REPO/actions/runs`. If CI seems not to fire on a fork, check that first.
+- **Doc-only pushes skip the build** via `paths-ignore` on the `push` and `pull_request` triggers
+  (`**.md`, `documentation/**`, `LICENSE`, `.gitignore`, `.gitattributes`, `.editorconfig`,
+  `.vscode/**`) — the Dockerfile copies none of those. `.github/workflows/**` is deliberately NOT
+  ignored, since a build is the only validation a workflow edit gets. Two properties this relies
+  on: **path filters are not evaluated for tag pushes** (per GitHub docs), so a `v*` release tag
+  builds even on a docs-only diff; and `main` has **no branch protection / required checks**, so a
+  docs-only PR reporting no check at all cannot strand a merge. If protection is ever added, add a
+  companion job that reports success for the ignored paths.
 - **Release steps are gated on `startsWith(github.ref, 'refs/tags/')`, not on the push event.**
   `antonyurchenko/git-release` FATALs unless `GITHUB_REF` matches `refs/tags/vX.Y.Z`, so the
   original `event_name == 'push'` guard failed every branch push, and the two archive steps
