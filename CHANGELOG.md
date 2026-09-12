@@ -5,7 +5,63 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+This is a fork. Releases `1.0.1` and earlier are the history of the upstream
+[`Ankermgmt`](https://github.com/Ankermgmt/ankermake-m5-protocol) project and are preserved here
+unchanged. See [Lineage and attribution](README.md#lineage-and-attribution) for the fork chain.
+
 ## [Unreleased]
+
+### Fork maintenance
+
+Repository housekeeping for the move to
+[`doublegate/ankermake-m5-protocol`](https://github.com/doublegate/ankermake-m5-protocol).
+No functional change to `ankerctl` or `libflagship`.
+
+ - Document the fork lineage, contributor attribution, and GPLv3 continuation in `README.md`.
+ - Retarget the issue-tracker link in `README.md` to this repository.
+ - Fix the CI branch triggers in `.github/workflows/build-and-publish.yml`: the build and release
+   job triggered on `master`, which is the *original* upstream's default branch. This fork (and its
+   direct upstream) use `main`, so no push to the default branch ever built an image or cut a
+   release. Also applies to the `latest` Docker tag conditions.
+ - Point `docker-compose.yaml` at this fork's own image,
+   `ghcr.io/doublegate/ankermake-m5-protocol:latest`, instead of `anselor/ankerctl:exile-latest`.
+ - Retarget the six `raw.githubusercontent.com` bootstrap URLs in
+   `documentation/install-from-docker.md` to this repository's `main` branch.
+ - Expand `.gitignore` to cover Python virtualenvs, PyInstaller build output, and — importantly —
+   `login.json`, the AnkerMake credential file users are instructed to copy into the working
+   directory during `config import`.
+
+### Inherited from upstream, not previously changelogged
+
+Work merged upstream between the `1.0.1` release and this fork point, reconstructed from the commit
+history. Credit belongs to the authors named; see `git log` for the authoritative record.
+
+#### Added
+
+ - Initial support for the AnkerMake M5C. (Thomas Reitmayr)
+ - Log in via the web interface, and fetch configuration by logging in rather than importing
+   `login.json`. (Thomas Reitmayr)
+ - Update printer IP addresses from both the CLI and the web interface. (Thomas Reitmayr)
+ - Set nozzle and heatbed target temperatures from the web interface. (Thomas Reitmayr, with
+   message-handling corrections by Chase Peeler)
+ - `wss://` support for the websocket endpoints. (snoj)
+ - Read startup configuration from `.env` or `.flaskenv`. (Eric Lin)
+ - Optional configuration in the docker compose file, and PyInstaller packaging for Windows
+   users. (Eric Lin)
+
+#### Changed
+
+ - Split the single PPPP status badge into distinct PPPP and VIDEO badges. (Thomas Reitmayr)
+ - Optimize chunk splitting in gcode file transfers. (Thomas Reitmayr)
+ - Raise the `_attempt_run` timeout from 1 second to 10 seconds. (Leif Lang)
+ - Redact the country code in printed configuration, for privacy. (Thomas Reitmayr)
+ - On `config login`, try to rescue already-configured printers. (Thomas Reitmayr)
+
+#### Fixed
+
+ - Bind the socket on broadcasts when running on Windows. (Thomas Reitmayr)
+ - Show proper error messages when a printer IP address is unreachable. (Thomas Reitmayr)
+ - Fix padding in `mqttapi::make_mqtt_pkt`. (Michael Toner)
 
 ## [1.0.1] - 2024-01-15
 

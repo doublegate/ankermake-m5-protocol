@@ -2,7 +2,16 @@
 
 Welcome! This repository contains `ankerctl`, a command-line interface and web UI for monitoring, controlling and interfacing with AnkerMake M5 and M5C 3D printers.
 
-**NOTE:** This is our first major release and while we have tested thoroughly there may be bugs. If you encounter one please open a [Github Issue](https://github.com/Ankermgmt/ankermake-m5-protocol/issues/new/choose)
+> **This is a fork.** This repository is [`doublegate/ankermake-m5-protocol`](https://github.com/doublegate/ankermake-m5-protocol),
+> maintained by [@doublegate](https://github.com/doublegate). It continues the work of the
+> [`anselor`](https://github.com/anselor/ankermake-m5-protocol) "exiles" fork, which in turn continues the original
+> [`Ankermgmt`](https://github.com/Ankermgmt/ankermake-m5-protocol) project by Christian Iversen.
+> See [Lineage and attribution](#lineage-and-attribution) for the full chain and credits.
+>
+> Please report issues with **this fork** to
+> [its issue tracker](https://github.com/doublegate/ankermake-m5-protocol/issues/new/choose).
+> Issues that reproduce against upstream are better filed with the
+> [upstream project](https://github.com/Ankermgmt/ankermake-m5-protocol/issues/new/choose).
 
 The `ankerctl` program uses [`libflagship`](documentation/developer-docs/libflagship.md), a library for communicating with the numerous different protocols required for connecting to an AnkerMake M5 or M5C printer. The `libflagship` library is also maintained in this repo, under [`libflagship/`](libflagship/).
 
@@ -173,6 +182,40 @@ Some examples:
 ./ankerctl.py -p <index> # index starts at 0 and goes up to the number of printers you have
 ```
 
+## Lineage and attribution
+
+`ankerctl` is Free Software under the GNU GPLv3, and this repository is the third link in a chain of
+forks. Each maintainer's work is preserved in the git history and carried forward under the same license.
+
+| Repository | Maintainer | Role |
+|---|---|---|
+| [`Ankermgmt/ankermake-m5-protocol`](https://github.com/Ankermgmt/ankermake-m5-protocol) | Christian Iversen ([@chrivers](https://github.com/chrivers)) and contributors | **Original project.** Created `ankerctl`, `libflagship`, and the reverse-engineered PPPP/MQTT/HTTP protocol specifications this tool is built on. |
+| [`anselor/ankermake-m5-protocol`](https://github.com/anselor/ankermake-m5-protocol) | Eric Lin ([@anselor](https://github.com/anselor)) and contributors | **Intermediate fork** (the "exiles" line). Community continuation carrying fixes and features that accumulated after the original repository slowed down. |
+| [`doublegate/ankermake-m5-protocol`](https://github.com/doublegate/ankermake-m5-protocol) | [@doublegate](https://github.com/doublegate) | **This fork.** Continued maintenance and development. |
+
+Contributions in the inherited history come from (by commit count) Christian Iversen, Billy Bryant,
+secprepper, Spencer Owen, LazeMSS, just-trey, Thomas Reitmayr, Austin Dennis, Eric Lin, Michael Toner,
+Tero Kivinen, Chris, Chase Peeler, Koen van Zuijlen, Leif Lang, Sondre Grønås, and snoj. The complete
+and authoritative list of authors is the repository's own commit history:
+
+```sh
+git shortlog -sne
+```
+
+### Changes in this fork
+
+This fork is currently **even with its upstream** (`anselor/ankermake-m5-protocol`) and carries no
+functional divergence yet. Changes made here will be recorded in [`CHANGELOG.md`](CHANGELOG.md) under
+`[Unreleased]` and summarized in this section as they land.
+
+To see exactly what this fork has changed at any point:
+
+```sh
+git remote add upstream https://github.com/anselor/ankermake-m5-protocol.git
+git fetch upstream
+git log --oneline upstream/main..HEAD
+```
+
 ## Legal
 
 This project is **<u>NOT</u>** endorsed, affiliated with, or supported by AnkerMake. All information found herein is gathered entirely from reverse engineering using publicly available knowledge and resources.
@@ -180,5 +223,10 @@ This project is **<u>NOT</u>** endorsed, affiliated with, or supported by AnkerM
 The goal of this project is to make the AnkerMake M5 and M5C usable and accessible using only Free and Open Source Software (FOSS).
 
 This project is [licensed under the GNU GPLv3](LICENSE), and copyright © 2023 Christian Iversen.
+
+This fork is distributed under that same GNU GPLv3 license. The original copyright notice above is
+retained in full; modifications made in this fork and in the intervening `anselor` fork are the
+copyright of their respective authors and are likewise released under the GPLv3. If you redistribute
+this software, modified or not, you must pass on these same freedoms.
 
 Some icons from [IconFinder](https://www.iconfinder.com/iconsets/3d-printing-line), and licensed under [Creative Commons](https://creativecommons.org/licenses/by/3.0/)
