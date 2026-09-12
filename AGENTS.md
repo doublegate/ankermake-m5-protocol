@@ -1005,10 +1005,16 @@ Add the path (or prefix) to `_PROTECTED_GET_PATHS` or rely on the `is_debug_path
 
 ## Commit and PR Guidelines
 
-- Use short, descriptive commit messages (sentence case)
-- Mention affected area (e.g., "Fix PPPP file upload reply handling")
-- Keep commits focused on single changes
-- Include testing notes and screenshots for UI changes
+- **Commit style is a deliberate split, not a contradiction.** The shared core mandates
+  Conventional Commits (`type(scope): subject`) and this fork's own commits follow it.
+  Upstream's history uses short sentence-case subjects naming the affected area ("Fix PPPP
+  file upload reply handling"), sometimes with an issue ID. Do not rewrite upstream commits
+  to match, and do not infer from `git log` that Conventional Commits are unwanted here —
+  the log is mostly someone else's work.
+- Keep each commit to one focused logical change, and name the affected area.
+- PRs carry a brief summary, testing notes, and screenshots for UI changes.
+- Prefer editing existing files over creating new ones, and match the surrounding module's
+  layout and naming rather than importing a new idiom.
 
 ## Security Notes
 
@@ -1079,22 +1085,17 @@ Things that have actually cost time here. Most are not visible from the code.
   from `gh api repos/OWNER/REPO/actions/runs`. If CI appears not to fire on a fork, check that
   before debugging the workflow.
 
+- **Version numbering is inconsistent across three sources, inherited from upstream.**
+  `pyproject.toml` says `1.11.0`, `hassio-addon/config.yaml` says `1.11.1`, and `CHANGELOG.md`
+  is not ordered monotonically — its topmost entry is `[1.0.0] - 2026-04-13` while `[1.11.1] -
+  2026-08-21` sits further down, below `[1.0.1]`. Reading the top of the CHANGELOG to answer
+  "what version is this" gives the wrong answer. Treat `pyproject.toml` as the build manifest
+  and reconcile the other two deliberately before cutting any release; do not silently
+  renumber upstream's history to tidy it.
+
 - **Default branch here is `main`; upstream's is `master`.** `ci.yml` triggers on both, so it
   works either way — but re-check after any merge from upstream, and note that the release
   workflow is tag-only (`v**`), so nothing publishes on a branch push.
-
-## Contributing conventions
-
-- **Commit style is a deliberate split.** The shared core mandates Conventional Commits
-  (`type(scope): subject`), and this fork's own commits follow it. Upstream's history uses
-  short sentence-case subjects that name the affected area ("Fix PPPP file upload reply
-  handling"), sometimes with an issue ID. Do not rewrite upstream commits to match, and do
-  not infer from `git log` that Conventional Commits are unwanted here — the log is mostly
-  someone else's.
-- Keep commits focused and name the affected area. PRs should carry a brief summary, testing
-  notes, and screenshots for UI changes.
-- Prefer editing existing files over creating new ones, and match the surrounding module's
-  layout and naming rather than importing a new idiom.
 
 <<< MC-PROJECT-END >>>
 

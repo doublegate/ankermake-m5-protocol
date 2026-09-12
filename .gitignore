@@ -31,6 +31,22 @@ SECURITY_AUDIT_REPORT.json
 TEST_COVERAGE_ANALYSIS.md
 build-local.sh
 
+# Build output. `make bundle-linux` runs PyInstaller into dist/ via
+# packaging/pyinstaller/ankerctl.spec — note that spec file is TRACKED, so a
+# blanket *.spec rule must NOT be added here or packaging silently breaks.
+/build/
+/dist/
+*.egg-info/
+
+# Virtualenvs (.venv/ is already covered above)
+venv/
+env/
+ENV/
+
+# Scratch dir the camera/timelapse paths write into. Eight stray .jpg files are
+# already tracked under .tmp/ from upstream; this rule stops more accumulating.
+.tmp/
+
 # Offline MQTT broker — generated certs (run offline/setup-certs.sh to regenerate)
 offline/mosquitto/certs/*.pem
 offline/mosquitto/certs/*.srl

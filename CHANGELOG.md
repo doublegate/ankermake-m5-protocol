@@ -30,6 +30,17 @@ or `libflagship`; the suite was verified green at the adoption point (519 passed
    reads was not covered, and its `user_id` authenticates to the MQTT broker.
  - Corrected `AGENTS.md`, which claimed the repository had no automated test suite, and
    recorded the fork's lineage, remotes, and codegen/credential pitfalls.
+ - Consolidated `CLAUDE.md` and `GEMINI.md` into `AGENTS.md`, which is now the single source
+   of agent guidance; the other two are symlinks to it and can no longer drift apart. Universal
+   engineering rules are imported from a shared core rather than restated. Replaced the
+   "Directory Structure" section, which consisted only of a pointer to `.claude/agent-memory/
+   INDEX.md` — a gitignored path absent from every clone — with an actual annotated table.
+ - Extended `.gitignore` with build output (`/build/`, `/dist/`, `*.egg-info/`), virtualenvs
+   and `.tmp/`. Deliberately **not** `*.spec`: `packaging/pyinstaller/ankerctl.spec` is tracked
+   and a blanket rule would silently break `make bundle-linux`.
+ - Removed a stray empty second `## [Unreleased]` heading from this file. Two such headings
+   make the `#unreleased` anchor ambiguous and invite entries being added to the buried one,
+   where nobody would see them.
 
 ## [1.0.0] - 2026-04-13
 
@@ -90,8 +101,6 @@ or `libflagship`; the suite was verified green at the adoption point (519 passed
  - Duplicate state update call in filament swap unload phase (first call was never visible)
  - Degree symbol inconsistency in filament swap status messages (`C` → `°C`)
  - ffmpeg stderr no longer leaks embedded URL credentials in camera capture error responses
-
-## [Unreleased]
 
 ## [1.11.1] - 2026-08-21
 
