@@ -1,19 +1,32 @@
 import logging as log
 import contextlib
 import json
+import os
+import re
 from datetime import datetime
 
 from pathlib import Path
 from platformdirs import PlatformDirs
 
 from libflagship.megajank import pppp_decode_initstring
-from libflagship.httpapi import AnkerHTTPApi, AnkerHTTPAppApiV1, \
-                                AnkerHTTPPassportApiV1, AnkerHTTPPassportApiV2, \
-                                APIError
+from libflagship.httpapi import (
+    AnkerHTTPApi,
+    AnkerHTTPAppApiV1,
+    AnkerHTTPPassportApiV1,
+    AnkerHTTPPassportApiV2,
+    APIError,
+)
 from libflagship.util import unhex
 from libflagship import logincache
 
-from .model import Serialize, Account, Printer, Config
+from .model import (
+    Serialize,
+    Account,
+    Printer,
+    Config,
+    default_notifications_config,
+    merge_dict_defaults,
+)
 
 
 class BaseConfigManager:
@@ -25,12 +38,13 @@ class BaseConfigManager:
         else:
             self._classes = []
         dirs.user_config_path.mkdir(exist_ok=True, parents=True)
+        os.chmod(dirs.user_config_path, 0o700)
 
     @contextlib.contextmanager
     def _borrow(self, value, write, default=None):
         pr = self.load(value, default)
         yield pr
-        if write and pr is not None:
+        if write:
             self.save(value, pr)
 
     @property
@@ -64,11 +78,24 @@ class BaseConfigManager:
         if not path.exists():
             return default
 
-        return json.load(path.open(), object_hook=self._load_json)
+        try:
+            with path.open() as f:
+                return json.load(f, object_hook=self._load_json)
+        except (json.JSONDecodeError, UnicodeDecodeError) as err:
+            corrupt_path = path.with_name(f"{path.name}.corrupt-{int(datetime.now().timestamp())}")
+            log.critical(f"Config file {path} is corrupt ({err}); moving aside to {corrupt_path} and using defaults")
+            try:
+                path.rename(corrupt_path)
+            except OSError as rename_err:
+                log.critical(f"Failed to move aside corrupt config file {path}: {rename_err}")
+            return default
 
     def save(self, name, value):
         path = self.config_path(name)
-        path.write_text(json.dumps(value, default=self._save_json, indent=2) + "\n")
+        tmp_path = path.with_name(f"{path.name}.tmp-{os.getpid()}")
+        tmp_path.write_text(json.dumps(value, default=self._save_json, indent=2) + "\n")
+        tmp_path.chmod(0o600)
+        os.replace(tmp_path, path)
 
 
 class AnkerConfigManager(BaseConfigManager):
@@ -79,6 +106,49 @@ class AnkerConfigManager(BaseConfigManager):
     def open(self):
         return self._borrow("default", write=False, default=Config(account=None, printers=[]))
 
+    def get_api_key(self):
+        """Load the API key from config. Returns None if not set."""
+        data = self.load("api_key", None)
+        if isinstance(data, dict):
+            return data.get("key")
+        return None
+
+    def set_api_key(self, key):
+        """Save the API key to config."""
+        self.save("api_key", {"key": key})
+
+    def remove_api_key(self):
+        """Remove the API key from config."""
+        path = self.config_path("api_key")
+        if path.exists():
+            path.unlink()
+
+
+API_KEY_MIN_LENGTH = 16
+API_KEY_PATTERN = re.compile(r'^[a-zA-Z0-9_-]+$')
+HEX_AUTH_TOKEN_RE = re.compile(r'^[0-9a-f]{47,48}$')
+
+
+def validate_api_key(key):
+    """Validate API key format. Returns (ok, error_message)."""
+    if len(key) < API_KEY_MIN_LENGTH:
+        return False, f"API key must be at least {API_KEY_MIN_LENGTH} characters (got {len(key)})"
+    if not API_KEY_PATTERN.match(key):
+        return False, "API key may only contain letters, digits, dashes and underscores [a-zA-Z0-9_-]"
+    return True, None
+
+
+def resolve_api_key(config):
+    """Resolve API key: ENV var takes precedence over config file."""
+    env_key = os.getenv("ANKERCTL_API_KEY")
+    if env_key:
+        ok, err = validate_api_key(env_key)
+        if not ok:
+            log.critical(f"ANKERCTL_API_KEY environment variable is invalid: {err}")
+            raise SystemExit(1)
+        return env_key
+    return config.get_api_key()
+
 
 def configmgr(profile="default"):
     return AnkerConfigManager(PlatformDirs("ankerctl"), classes=(Config, Account, Printer))
@@ -86,12 +156,12 @@ def configmgr(profile="default"):
 
 def load_config_from_api(auth_token, region, insecure):
     log.info("Initializing API..")
-    appapi = AnkerHTTPAppApiV1(auth_token=auth_token, region=region, verify=not insecure)
     ppapi = AnkerHTTPPassportApiV1(auth_token=auth_token, region=region, verify=not insecure)
 
     # request profile and printer list
     log.info("Requesting profile data..")
     profile = ppapi.profile()
+    appapi = AnkerHTTPAppApiV1(auth_token=auth_token, user_id=profile["user_id"], region=region, verify=not insecure)
 
     # create config object
     config = Config(account=Account(
@@ -99,15 +169,16 @@ def load_config_from_api(auth_token, region, insecure):
         region=region,
         user_id=profile['user_id'],
         email=profile["email"],
-        country=profile["country"]["code"],
+        country=profile.get("country", {}).get("code", ""),
     ), printers=[])
 
     log.info("Requesting printer list..")
-    printers = appapi.query_fdm_list()
+    printers = appapi.query_fdm_list() or []
 
     log.info("Requesting pppp keys..")
     sns = [pr["station_sn"] for pr in printers]
-    dsks = {dsk["station_sn"]: dsk for dsk in appapi.equipment_get_dsk_keys(station_sns=sns)["dsk_keys"]}
+    dsk_data = appapi.equipment_get_dsk_keys(station_sns=sns) or {}
+    dsks = {dsk["station_sn"]: dsk for dsk in dsk_data.get("dsk_keys") or []}
 
     # populate config object with printer list
     # Sort the list of printers by printer.id
@@ -153,28 +224,52 @@ def import_config_from_server(config, login_data, insecure):
     # extract account region
     region = logincache.guess_region(login_data["ab_code"])
 
-    try:
-        cfg = load_config_from_api(auth_token, region, insecure)
-    except APIError as E:
-        log.critical(f"Config import failed: {E} "
-                     "(auth token might be expired: make sure Ankermake Slicer can connect, then try again)")
-    except Exception as E:
-        log.critical(f"Config import failed: {E}")
+    candidate_tokens = [auth_token]
+    if isinstance(auth_token, str) and len(auth_token) == 47 and HEX_AUTH_TOKEN_RE.match(auth_token):
+        log.info("Detected a truncated eufyMake Studio session token; validating candidate prefixes..")
+        candidate_tokens.extend(f"{prefix}{auth_token}" for prefix in "0123456789abcdef")
 
-    # prepare to rescue any printer IP addresses already configured
+    cfg = None
+    last_error = None
+    recovered_token = None
+    for candidate_token in candidate_tokens:
+        try:
+            cfg = load_config_from_api(candidate_token, region, insecure)
+            recovered_token = candidate_token
+            break
+        except APIError as err:
+            last_error = err
+        except Exception as err:
+            last_error = err
+            if len(candidate_tokens) == 1:
+                log.critical(f"Config import failed: {err}")
+                raise
+
+    if cfg is None:
+        if isinstance(last_error, APIError):
+            log.critical(f"Config import failed: {last_error} "
+                         "(auth token might be expired: try 'ankerctl config login' to refresh)")
+        elif last_error is not None:
+            log.critical(f"Config import failed: {last_error}")
+        raise last_error
+
+    if recovered_token and recovered_token != auth_token:
+        log.info("Recovered full auth token from eufyMake Studio session cache.")
+        auth_token = recovered_token
+        cfg.account.auth_token = recovered_token
+
+    # keep any user preferences and printer IPs
+    existing = config.load("default", None)
     printer_ips = get_printer_ips(config)
+    cfg = merge_config_preferences(existing, cfg)
 
-    # save config to json file named `ankerctl/default.json`
     config.save("default", cfg)
-
-    # restore printer IP addresses
     update_empty_printer_ips(config, printer_ips)
 
 
 def get_printer_ips(config):
     try:
         with config.open() as cfg:
-            # prepare to rescue any printer IP addresses already configured
             printer_ips = dict([[p.sn, p.ip_addr] for p in cfg.printers if p.ip_addr])
     except KeyError:
         printer_ips = {}
@@ -184,47 +279,37 @@ def get_printer_ips(config):
 
 def update_empty_printer_ips(config, printer_ips):
     with config.modify() as cfg:
-        # update empty printer IP addresses to the provided ones
         for printer in cfg.printers:
             if not printer.ip_addr and printer.sn in printer_ips:
                 log.debug(f"Updating IP address of printer [{printer.sn}] to {printer_ips[printer.sn]}")
                 printer.ip_addr = printer_ips[printer.sn]
 
 
-def update_printer_ip_addresses(config, printer_ips: list) -> list:
-    """
-    Checks configured printer IP addresses against the given set of addresses
-    and updates the IP address in the configuration if they differ.
+def merge_config_preferences(existing, new_config):
+    if new_config is None:
+        return new_config
 
-    Returns:
-    - List of names of updated printers, None upon an error
-    """
-    updated_printers = list()
+    if existing is not None and hasattr(existing, "upload_rate_mbps"):
+        new_config.upload_rate_mbps = existing.upload_rate_mbps
 
-    with config.modify() as cfg:
-        if not cfg or not cfg.printers:
-            log.error("No printers configured. Run 'config login' or 'config import' to populate.")
-            return None
+    if existing is not None and hasattr(existing, "notifications"):
+        new_config.notifications = merge_dict_defaults(
+            existing.notifications,
+            default_notifications_config(),
+        )
+    else:
+        new_config.notifications = merge_dict_defaults(
+            getattr(new_config, "notifications", None),
+            default_notifications_config(),
+        )
 
-        for p in cfg.printers:
-            prefix = f"  Printer [{p.p2p_duid}]:"
-            if p.p2p_duid in printer_ips:
-                if p.ip_addr != printer_ips[p.p2p_duid]:
-                    old_ip = p.ip_addr if p.ip_addr else "<empty>"
-                    log.info(f"{prefix} Updating IP address from {old_ip} to {printer_ips[p.p2p_duid]}")
-                    p.ip_addr = printer_ips[p.p2p_duid]
-                    updated_printers.append(p.name)
-                else:
-                    log.info(f"{prefix} IP address {p.ip_addr} is already up-to-date")
-            else:
-                log.warning(f"{prefix} No network response received, check connection!")
-
-    return updated_printers
+    return new_config
 
 
 def attempt_config_upgrade(config, profile, insecure):
     path = config.config_path("default")
-    data = json.load(path.open())
+    with path.open() as f:
+        data = json.load(f)
     cfg = load_config_from_api(
         data["account"]["auth_token"],
         data["account"]["region"],
@@ -232,5 +317,7 @@ def attempt_config_upgrade(config, profile, insecure):
     )
 
     # save config to json file named `ankerctl/default.json`
+    existing = config.load("default", None)
+    cfg = merge_config_preferences(existing, cfg)
     config.save("default", cfg)
     log.info("Finished import")

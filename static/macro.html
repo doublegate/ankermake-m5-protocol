@@ -6,16 +6,16 @@
     <link rel="stylesheet" href="{{ url_for('static', filename=url) }}" />
 {%- endmacro %}
 
-{% macro menu_button(id, target, active=False, toggle="pill") %}
+{% macro menu_button(id, target, active=False) %}
     <li class="nav-item" role="presentation">
         <button
             class="btn btn-outline-primary nav-link{% if active %} active{% endif %}"
             id="{{id}}"
-            data-bs-toggle="{{toggle}}"
+            data-bs-toggle="pill"
             data-bs-target="#{{target}}"
             type="button"
             role="tab"
-            aria-controls="home"
+            aria-controls="{{target}}"
             aria-selected="{% if active %}true{% else %}false{% endif %}">
             {{ caller() }}
         </button>
@@ -34,8 +34,8 @@
     <button
         class="btn btn-secondary btn-sm"
         type="button"
-        data-toggle="tooltip"
-        data-placement="button"
+        data-bs-toggle="tooltip"
+        data-bs-placement="top"
         data-clipboard-src="{{src}}"
         title="Copy to Clipboard"
         >

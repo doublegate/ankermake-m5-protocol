@@ -132,7 +132,7 @@ country_codes = [
     {"c": "LT", "n": "Lithuania"},
     {"c": "LU", "n": "Luxembourg"},
     {"c": "MO", "n": "Macao"},
-    {"c": "MK", "n": "Macedonia, the Former Yugoslav Republic of"},
+    {"c": "MK", "n": "Macedonia, the former Yugoslav Republic of"},
     {"c": "MG", "n": "Madagascar"},
     {"c": "MW", "n": "Malawi"},
     {"c": "MY", "n": "Malaysia"},
@@ -251,6 +251,7 @@ country_codes = [
     {"c": "ZM", "n": "Zambia"},
     {"c": "ZW", "n": "Zimbabwe"}
 ]
+
 
 def code_to_country(code):
     if isinstance(code, str):

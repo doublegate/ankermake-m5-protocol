@@ -2,6 +2,7 @@ import logging as log
 import requests
 import functools
 import json
+import hashlib
 import time
 import socket
 from libflagship.megajank import ecdh_encrypt_login_password
@@ -32,6 +33,22 @@ def require_auth_token(func):
     return wrapper
 
 
+_SENSITIVE_JSON_KEYS = {
+    "auth_token", "token", "password", "secret_key", "dsk_key", "mqtt_key", "p2p_key",
+}
+
+
+def _redact_sensitive(value):
+    if isinstance(value, dict):
+        return {
+            k: ("[REDACTED]" if k.lower() in _SENSITIVE_JSON_KEYS else _redact_sensitive(v))
+            for k, v in value.items()
+        }
+    if isinstance(value, list):
+        return [_redact_sensitive(item) for item in value]
+    return value
+
+
 def unwrap_api(func):
 
     @functools.wraps(func)
@@ -41,7 +58,8 @@ def unwrap_api(func):
         data = func(self, *args, **kwargs)
         if data.ok:
             jsn = data.json()
-            log.debug(f"JSON result: {json.dumps(jsn, indent=4)}")
+            if log.getLogger().isEnabledFor(log.DEBUG):
+                log.debug(f"JSON result: {json.dumps(_redact_sensitive(jsn), indent=4)}")
             if jsn["code"] == 0:
                 data = jsn.get("data")
                 return data
@@ -56,14 +74,14 @@ def unwrap_api(func):
 class AnkerHTTPApi:
 
     scope = None
-
     hosts = {
         "eu": "make-app-eu.ankermake.com",
         "us": "make-app.ankermake.com",
     }
 
-    def __init__(self, auth_token=None, verify=True, region=None, base_url=None):
+    def __init__(self, auth_token=None, user_id=None, verify=True, region=None, base_url=None):
         self._auth = auth_token
+        self._user_id = user_id
         self._verify = verify
         if base_url:
             self._base = base_url
@@ -80,11 +98,21 @@ class AnkerHTTPApi:
 
     @unwrap_api
     def _get(self, url, headers=None):
-        return requests.get(f"{self._base}{self.scope}{url}", headers=headers, verify=self._verify)
+        full_headers = {}
+        if self._user_id:
+            full_headers["Gtoken"] = hashlib.md5(self._user_id.encode("utf-8")).hexdigest()
+        if headers:
+            full_headers.update(headers)
+        return requests.get(f"{self._base}{self.scope}{url}", headers=full_headers, verify=self._verify, timeout=(10, 30))
 
     @unwrap_api
     def _post(self, url, headers=None, data=None):
-        return requests.post(f"{self._base}{self.scope}{url}", headers=headers, verify=self._verify, json=data)
+        full_headers = {}
+        if self._user_id:
+            full_headers["Gtoken"] = hashlib.md5(self._user_id.encode("utf-8")).hexdigest()
+        if headers:
+            full_headers.update(headers)
+        return requests.post(f"{self._base}{self.scope}{url}", headers=full_headers, verify=self._verify, json=data, timeout=(10, 30))
 
 
 class AnkerHTTPAppApiV1(AnkerHTTPApi):
@@ -103,7 +131,9 @@ class AnkerHTTPAppApiV1(AnkerHTTPApi):
         return self._post("/query_fdm_list", headers={"X-Auth-Token": self._auth})
 
     @require_auth_token
-    def equipment_get_dsk_keys(self, station_sns, invalid_dsks={}):
+    def equipment_get_dsk_keys(self, station_sns, invalid_dsks=None):
+        if invalid_dsks is None:
+            invalid_dsks = {}
         return self._post("/equipment/get_dsk_keys", headers={"X-Auth-Token": self._auth}, data={
             "invalid_dsks": invalid_dsks,
             "station_sns": station_sns,
@@ -125,30 +155,25 @@ class AnkerHTTPPassportApiV2(AnkerHTTPApi):
 
     def login(self, email, password, captcha_id=None, captcha_answer=None):
         public_key, encryped_pwd = ecdh_encrypt_login_password(password.encode())
-        # some or all of these headers seem to be needed for a successfuly login
-        headers={
+        headers = {
             "App_name": "anker_make",
             "App_version": "",
             "Model_type": "PC",
             "Os_type": "windows",
             "Os_version": "10sp1",
         }
-        data={
+        data = {
             "client_secret_info": {
                 "public_key": public_key,
             },
             "email": email,
             "password": encryped_pwd,
         }
-
-        # add captcha data if specified
         if captcha_id is not None:
             data["captcha_id"] = captcha_id
         if captcha_answer is not None:
             data["answer"] = captcha_answer
 
-        print(f"data = {data}")
-        # perform the request
         return self._post("/login", headers=headers, data=data)
 
 
@@ -200,22 +225,24 @@ class AnkerHTTPHubApiV2(AnkerHTTPApi):
 
 
 def _find_closest_host(hosts):
-    """ get key of closest host in the provided dictionary """
     host_names = list(hosts.values())
-    connect_times = [_measure_host_connect_time(h) for h in host_names]
+    connect_times = [_measure_host_connect_time(h, 443) for h in host_names]
     host_index = connect_times.index(min(connect_times))
     host_name = host_names[host_index]
 
-    # find the key associated with `host_name`
     host_keys = list(hosts.keys())
     position = host_names.index(host_name)
     return host_keys[position]
 
 
 def _measure_host_connect_time(host, port=443):
-    """ see https://stackoverflow.com/a/6160222 """
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
         time_before = time.time()
         s.connect((host, port))
         result = time.time() - time_before
+    except (OSError, TimeoutError):
+        return float("inf")
+    finally:
+        s.close()
     return result

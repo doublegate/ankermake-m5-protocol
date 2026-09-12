@@ -1,0 +1,102 @@
+<div class="tab-pane fade" id="gcode" role="tabpanel" aria-labelledby="gcode-tab">
+    <div class="container mb-4">
+        <div class="row g-3">
+            <div class="col-lg-8 offset-lg-2">
+                <div class="card">
+                    <div class="card-header fs-6">
+                        GCode Console
+                    </div>
+                    <div class="card-body">
+                        <!-- File Upload (primary) -->
+                        <div class="row mb-3 g-3">
+                            <div class="col-12">
+                                <label for="gcode-file" class="form-label fw-semibold">
+                                    {{ macro.bi_icon("file-earmark-code") }} Upload GCode File
+                                </label>
+                                <div class="input-group">
+                                    <input type="file" class="form-control" id="gcode-file" accept=".gcode,.gco,.g">
+                                    <button class="btn btn-primary" id="gcode-file-send" type="button">
+                                        {{ macro.bi_icon("upload") }} Upload & Print
+                                    </button>
+                                </div>
+                                <div class="form-text">Upload a <code>.gcode</code> file as a print job via the same file-transfer
+                                    path used by slicers. Uploads go to printer storage. Use the section below to browse
+                                    and print files that are already on a thumb drive.</div>
+                            </div>
+                        </div>
+                        <!-- Custom GCode (secondary, collapsible) -->
+                        <div class="row mb-3 g-3">
+                            <div class="col-12">
+                                <a class="text-decoration-none small" data-bs-toggle="collapse"
+                                    href="#gcode-custom-section" role="button" aria-expanded="false">
+                                    {{ macro.bi_icon("terminal") }} Custom GCode Input
+                                </a>
+                                <div class="collapse mt-2" id="gcode-custom-section">
+                                    <div class="input-group">
+                                        <textarea class="form-control font-monospace" id="gcode-input" rows="3"
+                                            placeholder="Enter GCode commands (one per line)..."></textarea>
+                                        <button class="btn btn-outline-primary" id="gcode-text-send" type="button">
+                                            {{ macro.bi_icon("send") }} Send
+                                        </button>
+                                    </div>
+                                    <div class="form-text">For raw commands or short macros. If you paste a full
+                                        slicer-generated job, it will be uploaded as a print file instead.</div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Response Log -->
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label small text-muted">Response Log</label>
+                                <pre id="gcode-log" class="bg-dark text-light p-2 rounded font-monospace small"
+                                    style="max-height: 400px; overflow-y: auto; min-height: 200px;"></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-8 offset-lg-2">
+                <div class="card">
+                    <div class="card-header fs-6">
+                        Stored Printer Files
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3 align-items-end mb-3">
+                            <div class="col-md-6">
+                                <label for="gcode-storage-source" class="form-label fw-semibold">
+                                    {{ macro.bi_icon("folder2-open") }} Print Source
+                                </label>
+                                <select class="form-select" id="gcode-storage-source">
+                                    <option value="onboard">Printer Storage</option>
+                                    <option value="usb" selected>Thumb Drive</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <button class="btn btn-outline-secondary w-100" id="gcode-storage-refresh" type="button">
+                                    {{ macro.bi_icon("arrow-clockwise") }} Refresh File List
+                                </button>
+                            </div>
+                        </div>
+                        <div class="form-text mb-3">
+                            Browse GCode files already stored on printer storage or an attached thumb drive.
+                            The first file is selected automatically after a refresh, and you can click any other file before starting it.
+                        </div>
+                        <div class="small text-warning mb-2 d-none" id="gcode-storage-lock-note">
+                            File browsing is paused while the printer is busy. The list will refresh after the print stops.
+                        </div>
+                        <div class="small text-muted mb-2" id="gcode-storage-status">Choose a source and refresh to browse files.</div>
+                        <div id="gcode-storage-selected" class="alert alert-secondary py-2 small mb-3" style="display:none;"></div>
+                        <div class="d-grid mb-3">
+                            <button class="btn btn-primary" id="gcode-storage-print" type="button" disabled>
+                                {{ macro.bi_icon("play-fill") }} Print Selected File
+                            </button>
+                        </div>
+                        <div class="list-group" id="gcode-storage-list">
+                            <div class="list-group-item text-muted small">No storage files loaded yet.</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

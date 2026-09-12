@@ -1,38 +1,36 @@
-# --- Original upstream entries -------------------------------------------
 *~
 __pycache__
 .DS_Store
+.vscode
 /settings.json
-.idea/
+documentation/done/
+tmp/
+secrets/
+captures
+captures/
+dump/
+.env
+.env.*
+!.env.example
 
-# --- Credentials and captured traffic ------------------------------------
-# `ankerctl config import` reads AnkerMake's login.json, and the docs tell you
-# to copy it next to the tool. It contains the account user_id, which works as
-# an MQTT password. Never commit it.
+# AnkerMake account credentials. `ankerctl config import` reads login.json and the
+# docs walk users through placing it next to the tool; its user_id authenticates to
+# the MQTT broker and works as a password.
 login.json
 *.login.json
-
-# `--pppp-dump <file.log>` writes raw protocol captures, which include printer
-# DUIDs and session material.
-*.log
-
-# --- Python --------------------------------------------------------------
-*.py[cod]
-*.egg-info/
-.eggs/
+.claude/
+.claude-backup-20260324-132505/
+.claude-flow/
+.codex
+.swarm/
+.mcp.json
 .venv/
-venv/
-env/
-ENV/
+.wiki/
+*.log
+SECURITY_AUDIT_REPORT.json
+TEST_COVERAGE_ANALYSIS.md
+build-local.sh
 
-# --- PyInstaller (build-exe.bat) -----------------------------------------
-/build/
-/dist/
-*.spec
-
-# --- CI release staging (see .github/workflows/build-and-publish.yml) -----
-/release/
-
-# --- OS / editor ---------------------------------------------------------
-Thumbs.db
-*.swp
+# Offline MQTT broker — generated certs (run offline/setup-certs.sh to regenerate)
+offline/mosquitto/certs/*.pem
+offline/mosquitto/certs/*.srl

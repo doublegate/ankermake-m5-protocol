@@ -1,0 +1,10 @@
+[project]
+name = "ankerctl"
+version = "1.11.0"
+description = "CLI and web UI for AnkerMake M5 3D printers"
+readme = "README.md"
+license = {text = "GPL-3.0-only"}
+requires-python = ">=3.10"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

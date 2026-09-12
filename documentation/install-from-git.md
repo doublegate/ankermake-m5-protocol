@@ -5,9 +5,9 @@
 
 ## Windows
 
-1. Install the [AnkerMake slicer](https://www.ankermake.com/software). Make sure you open it and login via the “Account” dropdown in the top toolbar.
+1. Install [eufyMake Studio](https://www.eufymake.com/software). Make sure you open it and login via the “Account” dropdown in the top toolbar.
    **NOTE:** The slicer app does not need to be open for the rest of these steps.
-   
+
 2. Using `git` or [GitHub Desktop](https://desktop.github.com/), clone this repository into a location of your choice and then navigate to that location in File Explorer.
 
 3. Hold down the "Shift" key and right-click on some empty space in the repository top level folder. Select "Open in Terminal" (Windows 11) or  "Open PowerShell window here" (Windows 10) from the context menu dropdown. (If the following commands do not work, try re-opening your terminal window as administrator and use the `cd` command to navigate to where you cloned this repository)
@@ -48,7 +48,7 @@
 
 ## MacOS
 
-1. Install the [AnkerMake slicer](https://www.ankermake.com/software). Make sure you open it and login via the “Account” dropdown in the top toolbar.
+1. Install [eufyMake Studio](https://www.eufymake.com/software). Make sure you open it and login via the “Account” dropdown in the top toolbar.
    **NOTE:** The slicer app does not need to be open for the rest of these steps.
 
 2. Using `git` or [GitHub Desktop](https://desktop.github.com/), clone this repository into a location of your choice and then navigate to that location in Finder.
@@ -69,7 +69,7 @@
 
 ## Linux
 
-1. Install the [AnkerMake slicer](https://www.ankermake.com/software). Alternatively, you can install the slicer on a officially supported operating system that you have access to (Windows or MacOS) and use the `login.json` file from that machine. Either way you choose, make sure you open the slicer and login via the “Account” dropdown in the top toolbar.
+1. Install [eufyMake Studio](https://www.eufymake.com/software). Alternatively, you can install the slicer on a officially supported operating system that you have access to (Windows or MacOS) and use the `login.json` file from that machine. Either way you choose, make sure you open the slicer and login via the “Account” dropdown in the top toolbar.
 
    **NOTE:** The slicer app does not need to be open for the rest of these steps.
 

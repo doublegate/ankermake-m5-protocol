@@ -1,0 +1,71 @@
+name: ankerctl
+version: "1.11.1"
+slug: ankerctl
+description: Web UI and control interface for AnkerMake M5 3D printers
+url: https://github.com/doublegate/ankermake-m5-protocol
+arch:
+  - aarch64
+  - amd64
+  - armv7
+
+# PPPP uses asymmetric UDP — bridge networking breaks it
+host_network: true
+
+# Required for PPPP UDP LAN discovery (AppArmor otherwise blocks raw UDP broadcast)
+full_access: true
+
+# Pull the pre-built multi-arch image from GHCR
+image: ghcr.io/django1982/ankermake-m5-protocol-ha
+
+# Persistent config storage (maps to /data inside the addon container)
+map:
+  - data
+
+# Port declaration enables the "OPEN WEB UI" button in the addon panel
+ports:
+  4470/tcp: 4470
+ports_description:
+  4470/tcp: ankerctl Web UI
+
+# Watchdog — Supervisor auto-restarts the addon if health fails
+watchdog: http://[HOST]:4470/api/health
+
+startup: application
+boot: auto
+
+# User-configurable options exposed in the HA addon UI
+options:
+  flask_host: "0.0.0.0"
+  flask_port: 4470
+  flask_secret_key: ""
+  ankerctl_api_key: ""
+  printer_index: 0
+  upload_rate_mbps: 10
+  timelapse_enabled: false
+  timelapse_interval_sec: 30
+  apprise_enabled: false
+  apprise_server_url: ""
+  apprise_key: ""
+  ha_mqtt_enabled: false
+  ha_mqtt_host: "localhost"
+  ha_mqtt_port: 1883
+  ha_mqtt_user: ""
+  ha_mqtt_password: ""
+
+schema:
+  flask_host: str
+  flask_port: port
+  flask_secret_key: str?
+  ankerctl_api_key: str?
+  printer_index: int
+  upload_rate_mbps: "list(5|10|25|50|100)"
+  timelapse_enabled: bool
+  timelapse_interval_sec: int
+  apprise_enabled: bool
+  apprise_server_url: str?
+  apprise_key: str?
+  ha_mqtt_enabled: bool
+  ha_mqtt_host: str
+  ha_mqtt_port: port
+  ha_mqtt_user: str?
+  ha_mqtt_password: password?

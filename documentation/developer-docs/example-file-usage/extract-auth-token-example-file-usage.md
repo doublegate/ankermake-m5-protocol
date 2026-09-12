@@ -1,6 +1,6 @@
 # Extracting your Authentication Token
 
-**NOTE:** You need to have to have logged into the AnkerMake slicer in order for this to work, but it doesn't need to be open during this.
+**NOTE:** You need to have to have logged into eufyMake Studio in order for this to work, but it doesn't need to be open during this.
 
 1. Navigate to wherever you cloned this repository to and into the `examples` folder in your terminal.
 

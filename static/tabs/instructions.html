@@ -1,38 +1,275 @@
 <div class="tab-pane fade" id="instructions" role="tabpanel" aria-labelledby="instructions-tab">
-    <div class="container mb-4">
-        <div class="row g-3">
-            <div class="col-lg-6">
-                <h1 class="fs-3">Connecting PrusaSlicer/SuperSlicer</h1>
-                <ol class="list-group list-group-numbered mb-3">
-                    <li class="list-group-item">Go to "Printer settings" tab</li>
-                    <li class="list-group-item">Click the "Gear" icon {{ macro.bi_icon("gear-fill") }}
-                        (Add/Edit Physical Printer)</li>
-                    <li class="list-group-item">Fill in "Descriptive name for the printer" with whatever you like</li>
-                    <li class="list-group-item">Select your Ankermake printer instructions from the dropdown menu</li>
-                    <li class="list-group-item">Under "Host Type" select "OctoPrint"</li>
-                    <li class="list-group-item">In "Hostname, IP or URL" fill in with:
-                        <kbd id="octoPrintHost">{{ request_host }}:{{ request_port }}</kbd>
-                        {{ macro.clipboard_button("#octoPrintHost") }}
-                    </li>
-                    <li class="list-group-item">Leave "API Key / Password" blank</li>
-                    <li class="list-group-item">Click "Test" to validate input</li>
-                    <li class="list-group-item">Click "Ok" to close the window</li>
-                    <li class="list-group-item">Slice your file as normal</li>
-                    <li class="list-group-item">Click "G{{- macro.bi_icon("caret-right-fill") -}}" button to start
-                        direct upload to the printer</li>
-                    <li class="list-group-item">Click "Upload and print" - the "Upload"-only is not supported</li>
-
-                    <li class="list-group-item">Enjoy printing with ankerctl 😉</li>
-                </ol>
-                <span class="fw-light">
-                    Hint: <kbd>Ctrl+Shift+G</kbd> will slice and open the upload to printer window
-                </span>
+    <div class="container my-3">
+        <div class="row g-3 mb-3">
+            <div class="col-xl-8">
+                <div class="card h-100">
+                    <div class="card-header fs-4">{{ macro.bi_icon("rocket-takeoff") }} Quick Start</div>
+                    <div class="card-body">
+                        <ol class="mb-0">
+                            <li class="mb-2">
+                                Open <strong>Setup -&gt; Account</strong> and import your config from an open,
+                                signed-in <strong>eufyMake Studio</strong> session, or sign in directly with your
+                                AnkerMake / eufyMake account.
+                            </li>
+                            <li class="mb-2">
+                                Confirm your printer list in the <strong>AnkerMake M5 Config</strong> preview on the
+                                right side of the Account tab.
+                            </li>
+                            <li class="mb-2">
+                                If needed, switch to each printer from the navbar and save that printer's
+                                <strong>External Camera</strong> and <strong>Timelapse</strong> settings. Then review
+                                notification settings if you use alerts.
+                            </li>
+                            <li class="mb-2">
+                                Connect your slicer with the OctoPrint-compatible upload settings below, then use
+                                <strong>Upload and Print</strong> from the slicer.
+                            </li>
+                            <li class="mb-0">
+                                Use the <strong>Home</strong>, <strong>G-code</strong>, <strong>History</strong>,
+                                <strong>Timelapse</strong>, and <strong>Snapshots</strong> tabs to monitor and manage
+                                jobs after setup is complete.
+                            </li>
+                        </ol>
+                    </div>
+                </div>
             </div>
-            <div class="col-lg-6 text-center">
-                <img src="/static/img/setup/prusaslicer-1.png" class="img-thumbnail mt-2" alt="step 1" />
-                <img src="/static/img/setup/prusaslicer-2.png" class="img-thumbnail mt-2" alt="step 2" />
-                <img src="/static/img/setup/prusaslicer-3.png" class="img-thumbnail mt-2" alt="step 3" />
-                <img src="/static/img/setup/prusaslicer-4.png" class="img-thumbnail mt-2" alt="step 4" />
+            <div class="col-xl-4">
+                <div class="card h-100">
+                    <div class="card-header fs-4">{{ macro.bi_icon("check2-circle") }} Compatibility</div>
+                    <div class="card-body small">
+                        <div class="fw-semibold mb-2">Supported slicer workflow</div>
+                        <ul class="mb-3">
+                            <li>PrusaSlicer</li>
+                            <li>SuperSlicer</li>
+                            <li>OrcaSlicer</li>
+                            <li>Bambu Studio</li>
+                            <li>Other slicers with OctoPrint-compatible upload support</li>
+                        </ul>
+                        <div class="fw-semibold mb-2">Best-tested desktop browsers</div>
+                        <ul class="mb-0">
+                            <li>Google Chrome</li>
+                            <li>Microsoft Edge</li>
+                            <li>Mozilla Firefox</li>
+                            <li>Other modern desktop browsers may work, but Chrome / Edge / Firefox are the safest choices</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-xl-7">
+                <div class="card h-100">
+                    <div class="card-header fs-4">{{ macro.bi_icon("plug") }} Connect a Slicer</div>
+                    <div class="card-body">
+                        <div class="alert alert-info small">
+                            These steps apply to PrusaSlicer, SuperSlicer, OrcaSlicer, Bambu Studio, and similar slicers
+                            that support OctoPrint-style uploads.
+                        </div>
+                        <ol class="list-group list-group-numbered">
+                            <li class="list-group-item">Open your slicer's physical printer or connection settings.</li>
+                            <li class="list-group-item">Create or edit a printer connection for your AnkerMake / eufyMake printer.</li>
+                            <li class="list-group-item">Set <strong>Host Type</strong> to <strong>OctoPrint</strong>.</li>
+                            <li class="list-group-item">
+                                Use this host or URL:
+                                <kbd id="octoPrintHost">{{ request_host }}:{{ request_port }}</kbd>
+                                {{ macro.clipboard_button("#octoPrintHost") }}
+                            </li>
+                            <li class="list-group-item">
+                                Leave the slicer API key field blank unless you enabled an ankerctl API key. If you did,
+                                enter the same key here.
+                            </li>
+                            <li class="list-group-item">Click <strong>Test</strong> in the slicer and confirm the connection succeeds.</li>
+                            <li class="list-group-item">Slice as normal, then use <strong>Upload and Print</strong>.</li>
+                            <li class="list-group-item">
+                                For printer storage or USB reprints, use the <strong>G-code</strong> page in ankerctl rather
+                                than the slicer upload dialog.
+                            </li>
+                        </ol>
+                        <div class="form-text mt-3">
+                            Hint: in PrusaSlicer and SuperSlicer, <kbd>Ctrl+Shift+G</kbd> slices and opens the upload dialog.
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-xl-5">
+                <div class="card h-100">
+                    <div class="card-header fs-4">{{ macro.bi_icon("images") }} Example Screens</div>
+                    <div class="card-body text-center">
+                        <img src="/static/img/setup/prusaslicer-1.png" class="img-thumbnail mt-2" alt="PrusaSlicer setup step 1" />
+                        <img src="/static/img/setup/prusaslicer-2.png" class="img-thumbnail mt-2" alt="PrusaSlicer setup step 2" />
+                        <img src="/static/img/setup/prusaslicer-3.png" class="img-thumbnail mt-2" alt="PrusaSlicer setup step 3" />
+                        <img src="/static/img/setup/prusaslicer-4.png" class="img-thumbnail mt-2" alt="PrusaSlicer setup step 4" />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header fs-4">{{ macro.bi_icon("person-circle") }} Account Login or Config Import</div>
+                    <div class="card-body">
+                        <ol class="mb-0">
+                            <li class="mb-2">
+                                Recommended: open <strong>eufyMake Studio</strong>, sign in, then go to
+                                <strong>Setup -&gt; Account</strong> and click <strong>Import From eufyMake Studio</strong>.
+                            </li>
+                            <li class="mb-2">
+                                If you prefer, use <strong>Fetch Config From AnkerMake Server</strong> and sign in with
+                                email, password, country, and CAPTCHA if prompted.
+                            </li>
+                            <li class="mb-2">
+                                Manual fallback: upload the slicer cache file shown on the page if automatic import is not available.
+                            </li>
+                            <li class="mb-0">
+                                A successful import or login shows a green confirmation banner with the detected account
+                                email and printer count.
+                            </li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header fs-4">{{ macro.bi_icon("camera-video") }} External Camera Setup</div>
+                    <div class="card-body">
+                        <ol class="mb-0">
+                            <li class="mb-2">Switch to the printer you want to configure in the navbar first.</li>
+                            <li class="mb-2">Open <strong>Setup -&gt; Camera</strong>.</li>
+                            <li class="mb-2">
+                                Enter an external camera label and an FFmpeg-readable stream URL, such as RTSP or MJPEG.
+                                The stream URL drives the Home page live preview.
+                            </li>
+                            <li class="mb-2">
+                                Add a direct snapshot URL if your camera supports one for faster still snapshots and
+                                fallback capture.
+                            </li>
+                            <li class="mb-2">Click <strong>Save External Camera</strong>.</li>
+                            <li class="mb-0">
+                                On the <strong>Home</strong> page, switch between the printer camera and external camera.
+                                Manual snapshots follow the selected camera source. Timelapse has its own source setting
+                                in <strong>Setup -&gt; Timelapse</strong>, so Home page viewing does not have to interrupt
+                                captures.
+                            </li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header fs-4">{{ macro.bi_icon("camera-reels") }} Timelapse Per Printer</div>
+                    <div class="card-body">
+                        <ol class="mb-0">
+                            <li class="mb-2">Select the printer you want to configure from the printer selector.</li>
+                            <li class="mb-2">Open <strong>Setup -&gt; Timelapse</strong>.</li>
+                            <li class="mb-2">Enable timelapse, choose interval, retention, persistence, camera source, and light behavior.</li>
+                            <li class="mb-2">
+                                Use <strong>Follow Home camera selection</strong> only if you want Home page camera
+                                changes to affect capture. Choose <strong>Printer camera</strong> or <strong>External
+                                camera</strong> to pin timelapse to one source.
+                            </li>
+                            <li class="mb-2">Click <strong>Save</strong> for that printer.</li>
+                            <li class="mb-2">
+                                Repeat for each printer. Timelapse settings are stored per printer, so Thing 1 and Thing 2
+                                can use different settings.
+                            </li>
+                            <li class="mb-0">
+                                Finished videos appear on the <strong>Timelapse</strong> page, and captured frames plus
+                                manual snapshots appear on the <strong>Snapshots</strong> page.
+                            </li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header fs-4">{{ macro.bi_icon("thermometer-half") }} Filament Service</div>
+                    <div class="card-body">
+                        <ol class="mb-0">
+                            <li class="mb-2">Open the <strong>Filaments</strong> page to manage material profiles and printer-side filament moves.</li>
+                            <li class="mb-2">
+                                Use <strong>Quick Extrude / Retract</strong> for simple profile-based preheat, extrude,
+                                retract, and cooldown commands.
+                            </li>
+                            <li class="mb-2">
+                                The recommended swap flow preheats to <strong>Manual Swap Preheat</strong> and waits for
+                                you to change filament before pressing <strong>Continue / Load New Filament</strong>.
+                            </li>
+                            <li class="mb-2">
+                                <strong>Enable guided automatic unload / purge</strong> only when the printer is ready
+                                for movement. It will warn first, home the printer, lift Z 50 mm, prime,
+                                retract, wait for Continue, purge the new filament, and turn the nozzle heater off.
+                            </li>
+                            <li class="mb-0">
+                                Save filament service settings after changing quick move length, swap preheat, unload
+                                profile, load profile, or prime/unload/load lengths.
+                            </li>
+                        </ol>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header fs-4">{{ macro.bi_icon("activity") }} Status Badges</div>
+                    <div class="card-body">
+                        <ul class="mb-3">
+                            <li><strong>MQTT</strong> is the printer cloud message connection.</li>
+                            <li><strong>PPPP</strong> is the local printer control/video reachability check.</li>
+                            <li><strong>VIDEO</strong> is the active video stream when printer video is in use.</li>
+                            <li><strong>CTRL</strong> is the browser-to-ankerctl control channel, with printer control availability tied to PPPP reachability.</li>
+                        </ul>
+                        <div class="fw-semibold mb-2">Badge colors</div>
+                        <ul class="mb-0">
+                            <li><strong>Green</strong>: connected or reachable.</li>
+                            <li><strong>Yellow</strong>: waiting, reconnecting, or reachability is not confirmed yet.</li>
+                            <li><strong>Gray</strong>: dormant or inactive.</li>
+                            <li><strong>Red</strong>: connection or service error.</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header fs-4">{{ macro.bi_icon("life-preserver") }} Helpful Links</div>
+                    <div class="card-body">
+                        <ul class="mb-3">
+                            <li>
+                                <a href="https://github.com/doublegate/ankermake-m5-protocol" target="_blank" rel="noopener noreferrer">
+                                    ankerctl GitHub repository
+                                </a>
+                            </li>
+                            <li>
+                                <a href="https://github.com/doublegate/ankermake-m5-protocol/issues" target="_blank" rel="noopener noreferrer">
+                                    Report a bug or request a feature
+                                </a>
+                            </li>
+                            <li>
+                                <a href="https://support.eufymake.com/s/" target="_blank" rel="noopener noreferrer">
+                                    eufyMake support center
+                                </a>
+                            </li>
+                            <li>
+                                <a href="https://service.eufymake.com/" target="_blank" rel="noopener noreferrer">
+                                    eufyMake service portal
+                                </a>
+                            </li>
+                        </ul>
+                        <div class="fw-semibold mb-2">New-user tips</div>
+                        <ul class="mb-0">
+                            <li>Keep eufyMake Studio open and signed in if you are using automatic config import.</li>
+                            <li>If printer IP or PPPP looks stale, use <strong>Setup -&gt; Printer -&gt; Reload Services</strong>.</li>
+                            <li>Use the <strong>Home</strong> page for live status and alerts, and the <strong>History</strong> page for reprints.</li>
+                            <li>If you enable the API key feature, remember to enter the same key in your slicer connection.</li>
+                        </ul>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

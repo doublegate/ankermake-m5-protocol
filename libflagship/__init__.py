@@ -1,14 +1,25 @@
-"""
-This module imports the 'Path' class from the 'pathlib' package and sets the ROOT_DIR variable. 'Path' from 'pathlib'
-provides a more object-oriented method to handle filesystem paths.
+"""Shared runtime paths for source and bundled builds."""
 
-Variables:
-- ROOT_DIR: A Path object pointing to the parent directory of the file this code is in.
-
-Usage:
-- Import this module into your script, then access the ROOT_DIR variable to get the parent directory Path object
-for your project.
-"""
+import sys
 from pathlib import Path
 
-ROOT_DIR = Path(__file__).parent.parent
+
+def resolve_root_dir(*, frozen=None, meipass=None, executable=None, file_path=None):
+    """Resolve the application root for source and PyInstaller bundles."""
+    if frozen is None:
+        frozen = bool(getattr(sys, "frozen", False))
+    if meipass is None:
+        meipass = getattr(sys, "_MEIPASS", None)
+    if executable is None:
+        executable = getattr(sys, "executable", None)
+    if file_path is None:
+        file_path = __file__
+
+    if frozen and meipass:
+        return Path(meipass).resolve()
+    if frozen and executable:
+        return Path(executable).resolve().parent
+    return Path(file_path).parent.parent
+
+
+ROOT_DIR = resolve_root_dir()

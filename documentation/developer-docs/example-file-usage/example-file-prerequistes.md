@@ -2,9 +2,9 @@
 
 In order to run the example scripts, you'll need to install some supporting software onto your machine. 
 
-You'll need Python 3, some pip packages, and the AnkerMake slicer. 
+You'll need Python 3, some pip packages, and eufyMake Studio.
 
-If you're on Linux, all these tools are natively supported. To install/run the AnkerMake slicer, you'll need some type of translation layer software such as [Wine](https://www.winehq.org/) or [Proton-Caller](https://github.com/caverym/proton-caller).
+If you're on Linux, all these tools are natively supported. To install/run eufyMake Studio, you'll need some type of translation layer software such as [Wine](https://www.winehq.org/) or [Proton-Caller](https://github.com/caverym/proton-caller).
 
 We also include the [Transwarp Compiler](https://github.com/chrivers/transwarp) in our `requirements.txt` file for convenience should you want to generate new library files from templates.
 
@@ -12,9 +12,9 @@ We also include the [Transwarp Compiler](https://github.com/chrivers/transwarp) 
 
 ### Windows
 
-1. Install the [AnkerMake slicer](https://www.ankermake.com/software). Make sure you open it and login.
+1. Install [eufyMake Studio](https://www.eufymake.com/software). Make sure you open it and login.
    **NOTE:** The slicer app does not need to be open for the rest of these steps.
-   
+
 2. Using `git` or [GitHub Desktop](https://desktop.github.com/), clone this repository into a location of your choice and then navigate to that location in File Explorer.
 
 3. Hold down the "Shift" key and right-click on some empty space in the repository top level folder. Select "Open in Terminal" from the context menu dropdown. (If the following commands do not work, try re-opening your terminal window as administrator and use the `cd` command to navigate to where you cloned this repository to)
@@ -55,7 +55,7 @@ We also include the [Transwarp Compiler](https://github.com/chrivers/transwarp) 
 
 ### MacOS
 
-1. Install the [AnkerMake slicer](https://www.ankermake.com/software). Make sure you open it and login.
+1. Install [eufyMake Studio](https://www.eufymake.com/software). Make sure you open it and login.
    **NOTE:** The slicer app does not need to be open for the rest of these steps.
 
 2. Using `git` or [GitHub Desktop](https://desktop.github.com/), clone this repository into a location of your choice and then navigate to that location in Finder.
@@ -74,7 +74,7 @@ We also include the [Transwarp Compiler](https://github.com/chrivers/transwarp) 
 
 ### Linux
 
-1. Install the [AnkerMake slicer](https://www.ankermake.com/software). Alternatively, you can install the slicer on a officially supported operating system that you have access to (Windows or MacOS) and use the `login.json` file from that machine. Either way you choose, make sure you open the slicer and login.
+1. Install [eufyMake Studio](https://www.eufymake.com/software). Alternatively, you can install the slicer on a officially supported operating system that you have access to (Windows or MacOS) and use the `login.json` file from that machine. Either way you choose, make sure you open the slicer and login.
 
    **NOTE:** The slicer app does not need to be open for the rest of these steps.
 

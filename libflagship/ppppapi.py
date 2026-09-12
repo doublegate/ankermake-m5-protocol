@@ -3,11 +3,11 @@ import socket
 import string
 import hashlib
 import logging as log
+import time
 
 from enum import Enum
-from multiprocessing import Pipe
 from datetime import datetime, timedelta
-from threading import Thread, Event, Lock
+from threading import Thread, Event, Lock, Condition
 from socket import AF_INET
 from dataclasses import dataclass
 
@@ -20,6 +20,44 @@ from libflagship.pppp import Type, \
 
 PPPP_LAN_PORT = 32108
 PPPP_WAN_PORT = 32100
+PPPP_SOCKET_RCVBUF = 1024 * 1024
+PPPP_SOCKET_SNDBUF = 256 * 1024
+_REMOTE_CLOSE_LOG_COOLDOWN = 10.0
+
+
+def _configure_udp_socket(sock, *, broadcast=False, local_port=None):
+    for opt_name, value in (
+        ("SO_RCVBUF", PPPP_SOCKET_RCVBUF),
+        ("SO_SNDBUF", PPPP_SOCKET_SNDBUF),
+        ("SO_REUSEADDR", 1),
+    ):
+        opt = getattr(socket, opt_name, None)
+        if opt is None:
+            continue
+        try:
+            sock.setsockopt(socket.SOL_SOCKET, opt, value)
+        except OSError:
+            pass
+
+    if broadcast:
+        try:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        except OSError:
+            pass
+
+    if local_port is not None:
+        try:
+            sock.bind(('', local_port))
+        except OSError as e:
+            import errno
+            if e.errno == errno.EADDRINUSE:
+                raise RuntimeError(
+                    f"PPPP local port {local_port} already in use — "
+                    "is another ankerctl instance running?"
+                ) from e
+            raise
+
+    return sock
 
 
 class PPPPError(Exception):
@@ -32,7 +70,7 @@ class PPPPError(Exception):
 @dataclass
 class FileUploadInfo:
     name: str
-    size: str
+    size: int
     md5: str
     user_name: str
     user_id: str
@@ -54,8 +92,9 @@ class FileUploadInfo:
 
     @classmethod
     def from_file(cls, filename, user_name, user_id, machine_id, type=0):
-        data = open(filename, "rb").read()
-        return cls.from_data(data, filename, user_name, user_id, machine_id, type=0)
+        with open(filename, "rb") as f:
+            data = f.read()
+        return cls.from_data(data, filename, user_name, user_id, machine_id, type=type)
 
     @classmethod
     def from_data(cls, data, filename, user_name, user_id, machine_id, type=0):
@@ -79,33 +118,27 @@ class FileUploadInfo:
 class Wire:
 
     def __init__(self):
-        self.buf = []
-        self.rx, self.tx = Pipe(False)
+        self.buf = bytearray()
+        self._cond = Condition()
 
     def peek(self, size, timeout=None):
-        # Zero timeout on self.rx.poll() means "wait forever", but we want it to
-        # mean "no wait", so we emulate that by setting it to 1us.
-        if timeout == 0.0:
-            timeout = 0.000001
-
-        if timeout is not None:
-            deadline = datetime.now() + timedelta(seconds=timeout)
-
-        while len(self.buf) < size:
-            if timeout and not self.rx.poll(timeout=(deadline - datetime.now()).total_seconds()):
+        with self._cond:
+            if not self._cond.wait_for(lambda: len(self.buf) >= size, timeout=timeout):
                 return None
-            self.buf.extend(self.rx.recv())
-
-        return bytes(self.buf[:size])
+            return bytes(self.buf[:size])
 
     def read(self, size, timeout=None):
-        res = self.peek(size, timeout)
-        if res:
-            self.buf = self.buf[size:]
-        return res
+        with self._cond:
+            if not self._cond.wait_for(lambda: len(self.buf) >= size, timeout=timeout):
+                return None
+            res = bytes(self.buf[:size])
+            del self.buf[:size]
+            return res
 
     def write(self, data):
-        self.tx.send(data)
+        with self._cond:
+            self.buf.extend(data)
+            self._cond.notify_all()
 
 
 class Channel:
@@ -126,6 +159,10 @@ class Channel:
         self.max_in_flight = max_in_flight
         self.max_age_warn = max_age_warn
         self.lock = Lock()
+        self._tx_lock = Lock()
+        self._rx_gap_report_at = 0.0
+        self._rx_gap_report_skips = 0
+        self._rx_gap_report_packets = 0
 
     def rx_ack(self, acks):
         # remove all ACKed packets from transmission queue
@@ -158,26 +195,76 @@ class Channel:
             self.rx_ctr += 1
             self.rx.write(data)
 
+    def skip_rx_gap(self, max_queued=16):
+        """Drop a stale receive gap and resume at the oldest queued packet.
+
+        Video is a realtime stream carried over UDP. If one DRW packet never
+        arrives, waiting forever for perfect ordering freezes every later frame.
+        This intentionally sacrifices the damaged bytes so higher layers can
+        resync at the next XZYH frame boundary.
+        """
+        if self.rx_ctr in self.rxqueue or len(self.rxqueue) < max_queued:
+            return False
+
+        next_index = min(
+            self.rxqueue,
+            key=lambda idx: int(CyclicU16(idx) - self.rx_ctr),
+        )
+        gap = int(CyclicU16(next_index) - self.rx_ctr)
+        self._rx_gap_report_skips += 1
+        self._rx_gap_report_packets += gap
+        now = time.monotonic()
+        if now - self._rx_gap_report_at >= 10.0:
+            log.debug(
+                f"Channel {self.index}: realtime receive-gap recovery "
+                f"({self._rx_gap_report_packets} packet(s) skipped across "
+                f"{self._rx_gap_report_skips} gap(s))"
+            )
+            self._rx_gap_report_at = now
+            self._rx_gap_report_skips = 0
+            self._rx_gap_report_packets = 0
+        else:
+            log.debug(
+                f"Channel {self.index}: skipping stale receive gap of {gap} packet(s) "
+                f"after {len(self.rxqueue)} queued packet(s)"
+            )
+        self.rx_ctr = CyclicU16(next_index)
+        self.rx.buf.clear()
+
+        while self.rx_ctr in self.rxqueue:
+            data = self.rxqueue[self.rx_ctr]
+            del self.rxqueue[self.rx_ctr]
+            self.rx_ctr += 1
+            self.rx.write(data)
+        return True
+
     def poll(self):
         # signal event to make blocking reads check status again
         self.event.set()
 
         txq = self.txqueue
 
-        if self.backlog and len(txq) < self.max_in_flight:
-            while self.backlog and len(txq) < self.max_in_flight:
-                txq.append(self.backlog.pop(0))
+        with self._tx_lock:
+            if self.backlog and len(txq) < self.max_in_flight:
+                while self.backlog and len(txq) < self.max_in_flight:
+                    txq.append(self.backlog.pop(0))
 
-            # sort list to make sure oldest deadline is first
-            txq.sort()
+                # sort list to make sure oldest deadline is first
+                txq.sort()
 
         res = []
         now = datetime.now()
 
+        retransmitted = False
         while txq and txq[0][0] < now:
             deadline, index, pkt = txq.pop(0)
             res.append(PktDrw(chan=self.index, index=index, data=pkt))
             txq.append((deadline + self.timeout, index, pkt))
+            retransmitted = True
+
+        if retransmitted:
+            # restore deadline ordering after appending rescheduled packets
+            txq.sort()
 
         # the returned chunks will be (re)transmitted
         return res
@@ -192,30 +279,54 @@ class Channel:
     def read(self, nbytes, timeout=None):
         return self.rx.read(nbytes, timeout)
 
-    def write(self, payload, block=True):
-        pdata = payload[:]
+    def write(self, payload, block=True, timeout=None):
+        # memoryview avoids re-copying the shrinking tail on each chunk
+        # (bytes slicing is O(n^2) for large payloads); chunks are converted
+        # back to bytes since packet packing requires a bytes/Bytes payload.
+        pdata = memoryview(payload)
 
         tx_ctr_start = self.tx_ctr
 
         # schedule all packets, starting from current time
         deadline = datetime.now()
-        while pdata:
-            # schedule transmission in 1kb chunks
-            data, pdata = pdata[:1024], pdata[1024:]
-            self.backlog.append((deadline, self.tx_ctr, data))
-            self.tx_ctr += 1
+        with self._tx_lock:
+            while pdata:
+                # schedule transmission in 1kb chunks
+                data, pdata = bytes(pdata[:1024]), pdata[1024:]
+                self.backlog.append((deadline, self.tx_ctr, data))
+                self.tx_ctr += 1
 
-        tx_ctr_done = self.tx_ctr
+            tx_ctr_done = self.tx_ctr
+
+        deadline = None
+        if block and timeout is not None:
+            deadline = datetime.now() + timedelta(seconds=timeout)
 
         while block:
             # if doing a blocking write, loop on self.event until we have
             # received acknowledgment of our data
-            self.wait()
+            if deadline is not None:
+                remaining = (deadline - datetime.now()).total_seconds()
+                if remaining <= 0:
+                    raise TimeoutError("Timed out waiting for PPPP DRW ACK")
+                self.event.wait(timeout=min(remaining, 0.5))
+                self.event.clear()
+            else:
+                self.wait()
 
             if self.tx_ack >= tx_ctr_done:
                 break
 
         return (tx_ctr_start, tx_ctr_done)
+
+    def reset_tx(self):
+        with self.lock:
+            self.txqueue.clear()
+            with self._tx_lock:
+                self.backlog.clear()
+            self.acks.clear()
+            self.tx_ack = self.tx_ctr
+            self.event.set()
 
 
 class PPPPState(Enum):
@@ -239,26 +350,33 @@ class AnkerPPPPBaseApi(Thread):
         self.running = True
         self.stopped = Event()
         self.dumper = None
+        self._remote_close_log_at = 0.0
+        self._remote_close_count = 0
 
     @classmethod
     def open(cls, duid, host, port):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock = _configure_udp_socket(socket.socket(socket.AF_INET, socket.SOCK_DGRAM))
         return cls(sock, duid, addr=(host, port))
 
     @classmethod
     def open_lan(cls, duid, host):
-        return cls.open(duid, host, PPPP_LAN_PORT)
+        sock = _configure_udp_socket(
+            socket.socket(socket.AF_INET, socket.SOCK_DGRAM),
+            local_port=PPPP_LAN_PORT,
+        )
+        return cls(sock, duid, addr=(host, PPPP_LAN_PORT))
 
     @classmethod
     def open_wan(cls, duid, host):
         return cls.open(duid, host, PPPP_WAN_PORT)
 
     @classmethod
-    def open_broadcast(cls, bind_addr=None):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-        if bind_addr is not None:
-            sock.bind((bind_addr, 0))
+    def open_broadcast(cls):
+        sock = _configure_udp_socket(
+            socket.socket(socket.AF_INET, socket.SOCK_DGRAM),
+            broadcast=True,
+            local_port=PPPP_LAN_PORT,
+        )
         addr = ("255.255.255.255", PPPP_LAN_PORT)
         return cls(sock, duid=None, addr=addr)
 
@@ -299,7 +417,23 @@ class AnkerPPPPBaseApi(Thread):
     def process(self, msg):
 
         if msg.type == Type.CLOSE:
-            log.error("CLOSE")
+            now = time.monotonic()
+            self._remote_close_count += 1
+            if (
+                self._remote_close_count == 1
+                or (now - self._remote_close_log_at) >= _REMOTE_CLOSE_LOG_COOLDOWN
+            ):
+                self._remote_close_log_at = now
+                suffix = ""
+                if self._remote_close_count > 1:
+                    suffix = f" (seen {self._remote_close_count} times)"
+                log.warning(
+                    "PPPP: received CLOSE from remote peer (addr=%s, duid=%s, state=%s)%s",
+                    getattr(self, "addr", None),
+                    getattr(self, "duid", None),
+                    getattr(self, "state", None),
+                    suffix,
+                )
             raise ConnectionResetError
 
         elif msg.type == Type.REPORT_SESSION_READY:
@@ -349,8 +483,14 @@ class AnkerPPPPBaseApi(Thread):
         if self.state in {PPPPState.Idle, PPPPState.Disconnected}:
             raise ConnectionError(f"Tried to recv packet in state {self.state}")
 
+        prev_timeout = self.sock.gettimeout()
         self.sock.settimeout(timeout)
-        data, self.addr = self.sock.recvfrom(4096)
+        try:
+            data, self.addr = self.sock.recvfrom(65535)
+        except BlockingIOError as e:
+            raise TimeoutError("recv would block") from e
+        finally:
+            self.sock.settimeout(prev_timeout)
         if self.dumper:
             self.dumper.rx(data, self.addr)
         msg = Message.parse(data)[0]
@@ -368,7 +508,7 @@ class AnkerPPPPBaseApi(Thread):
         log.debug(f"TX  --> {str(msg)[:128]}")
         self.sock.sendto(resp, addr or self.addr)
 
-    def send_xzyh(self, data, cmd, chan=0, unk0=0, unk1=0, sign_code=0, unk3=0, dev_type=0, block=True):
+    def send_xzyh(self, data, cmd, chan=0, unk0=0, unk1=0, sign_code=0, unk3=0, dev_type=0, block=True, timeout=None):
         xzyh = Xzyh(
             cmd=cmd,
             len=len(data),
@@ -381,9 +521,9 @@ class AnkerPPPPBaseApi(Thread):
             dev_type=dev_type
         )
 
-        return self.chans[chan].write(xzyh.pack(), block=block)
+        return self.chans[chan].write(xzyh.pack(), block=block, timeout=timeout)
 
-    def send_aabb(self, data, sn=0, pos=0, frametype=0, chan=1, block=True):
+    def send_aabb(self, data, sn=0, pos=0, frametype=0, chan=1, block=True, timeout=None):
         aabb = Aabb(
             frametype=frametype,
             sn=sn,
@@ -391,7 +531,10 @@ class AnkerPPPPBaseApi(Thread):
             len=len(data)
         )
 
-        return self.chans[chan].write(aabb.pack_with_crc(data), block=block)
+        return self.chans[chan].write(aabb.pack_with_crc(data), block=block, timeout=timeout)
+
+    def reset_chan_tx(self, chan=1):
+        self.chans[chan].reset_tx()
 
 
 class AnkerPPPPApi(AnkerPPPPBaseApi):
@@ -417,17 +560,23 @@ class AnkerPPPPApi(AnkerPPPPBaseApi):
             xzyh.data = data[16:]
             return xzyh
 
-    def recv_aabb(self, chan=1):
+    def recv_aabb(self, chan=1, timeout=None):
         fd = self.chans[chan]
 
-        data = fd.read(12)
-        aabb = Aabb.parse(data)[0]
-        p = data + fd.read(aabb.len + 2)
-        aabb, data = Aabb.parse_with_crc(p)[:2]
+        with fd.lock:
+            data = fd.read(12, timeout=timeout)
+            if not data:
+                raise TimeoutError("Timed out waiting for AABB header")
+            aabb = Aabb.parse(data)[0]
+            tail = fd.read(aabb.len + 2, timeout=timeout)
+            if not tail:
+                raise TimeoutError("Timed out waiting for AABB payload")
+            p = data + tail
+            aabb, data = Aabb.parse_with_crc(p)[:2]
         return aabb, data
 
-    def recv_aabb_reply(self, chan=1, check=True):
-        aabb, data = self.recv_aabb(chan=chan)
+    def recv_aabb_reply(self, chan=1, check=True, timeout=None):
+        aabb, data = self.recv_aabb(chan=chan, timeout=timeout)
         if len(data) != 1:
             raise ValueError(f"Unexpected reply from aabb request: {data}")
 
@@ -437,9 +586,9 @@ class AnkerPPPPApi(AnkerPPPPBaseApi):
 
         return res
 
-    def aabb_request(self, data, frametype, pos=0, chan=1, check=True):
-        self.send_aabb(data=data, frametype=frametype, chan=chan, pos=pos)
-        return self.recv_aabb_reply(chan, check)
+    def aabb_request(self, data, frametype, pos=0, chan=1, check=True, timeout=None):
+        self.send_aabb(data=data, frametype=frametype, chan=chan, pos=pos, timeout=timeout)
+        return self.recv_aabb_reply(chan, check, timeout=timeout)
 
 
 class AnkerPPPPAsyncApi(AnkerPPPPBaseApi):

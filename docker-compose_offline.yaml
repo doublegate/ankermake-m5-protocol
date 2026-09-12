@@ -1,0 +1,65 @@
+# Offline stack for ankerctl — replaces Anker's cloud MQTT broker with a local Mosquitto.
+#
+# Prerequisites:
+#   1. Generate TLS certs once:       bash offline/setup-certs.sh
+#   2. Add DNS rewrites in AdGuard/Pi-hole pointing to this host:
+#        make-mqtt-eu.ankermake.com → <this-host-ip>
+#        make-mqtt.ankermake.com    → <this-host-ip>
+#   3. Copy .env.example to .env and fill in required values.
+#
+# Usage:
+#   docker compose -f docker-compose_offline.yaml up -d
+#
+# Notes:
+#   - ankerctl uses ANKERCTL_MQTT_CA_CERT to pin the local CA (proper TLS, no -k needed).
+#   - The printer firmware accepts any cert without pinning (verified 2026-04-28, fw V8111).
+#   - Port 8789 must be free on the host. Check: ss -tlnp | grep 8789
+#   - network_mode: host is required for PPPP (asymmetric UDP to printer).
+#
+# Tested with: printer SN AK7ZRM2D20500427, firmware V8111, AdGuard Home DNS.
+
+services:
+
+  mosquitto-anker:
+    image: eclipse-mosquitto:2
+    container_name: mosquitto-anker
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - ./offline/mosquitto/config/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ./offline/mosquitto/certs:/mosquitto/certs:ro
+      - ./offline/mosquitto/log:/mosquitto/log
+      - mosquitto_data:/mosquitto/data
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-h", "127.0.0.1", "-p", "8789",
+             "--insecure", "-t", "$$SYS/broker/uptime", "-C", "1", "-W", "3"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  ankerctl:
+    image: django01982/ankerctl:local
+    container_name: ankerctl
+    restart: unless-stopped
+    network_mode: host
+    depends_on:
+      mosquitto-anker:
+        condition: service_healthy
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      ANKERCTL_MQTT_CA_CERT: /mqtt-certs/ca-cert.pem
+    command: ["/app/ankerctl.py", "webserver", "run", "--host", "0.0.0.0"]
+    volumes:
+      - ankerctl_vol:/home/ankerctl/.config/ankerctl
+      - captures_vol:/captures
+      - logs_vol:/logs
+      - ./offline/mosquitto/certs:/mqtt-certs:ro
+
+volumes:
+  ankerctl_vol:
+  captures_vol:
+  logs_vol:
+  mosquitto_data:

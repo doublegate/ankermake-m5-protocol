@@ -1,38 +1,169 @@
-<div
-    class="tab-pane fade{% if configure %} show active{% endif %}"
-    id="home"
-    role="tabpanel"
-    aria-labelledby="home-tab"
->
-    <div class="container fullscreen-emulate" id="vmain">
+<div class="tab-pane fade{% if configure %} show active{% endif %}" id="home" role="tabpanel"
+    aria-labelledby="home-tab">
+    <div class="container">
         <div class="row g-3">
             <div class="col-md-12 col-lg-6 col-xl-8">
-                {% if video_supported %}
-                <!-- Video Container -->
-                <div id="vplayer" class="position-relative">
-                    <video
-                        class="w-100 d-block rounded-3 bg-body-tertiary"
-                        playsinline
-                        autoplay
-                        muted
-                        id="player"
-                        poster="{{ url_for('static', filename='img/load-screen.svg') }}"
-                    >
-                    </video>
-                    <button class="btn btn-secondary opacity-50" id="video-fs">
-                        {{ macro.bi_icon("fullscreen") }}
-                    </button>
-                </div>
-                {% else %}
-                <div class="card">
-                    <div class="card-body text-center">
-                        <p class="display-1">
-                            {{ macro.bi_icon("camera-video-off") }}
-                        </p>
-                        <p class="display-6">Camera not available</p>
+                {% if show_camera_ffmpeg_warning and not ffmpeg_available %}
+                <div class="alert alert-warning d-flex gap-2 align-items-start">
+                    <span class="mt-1">{{ macro.bi_icon("exclamation-triangle-fill") }}</span>
+                    <div>
+                        <div class="fw-semibold">Camera features need `ffmpeg`</div>
+                        <div class="small">
+                            External camera preview, snapshots, and timelapse capture are limited until `ffmpeg` is installed
+                            on this host. Printer live video can still work without it when the printer supports it.
+                        </div>
                     </div>
                 </div>
                 {% endif %}
+                <div class="card mb-3">
+                    <div class="card-header d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-2">
+                        <div class="d-flex flex-column">
+                            <span class="fs-6">Camera</span>
+                            <span id="camera-source-status" class="small text-muted">
+                                Loading camera settings...
+                            </span>
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <label class="small text-muted mb-0" for="camera-source-select">Source</label>
+                            <select class="form-select form-select-sm" id="camera-source-select" style="min-width: 180px;">
+                                <option value="printer">Printer camera</option>
+                                <option value="external">External camera</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="vplayer" style="display: none;">
+                            <video class="w-100 d-block rounded-3 bg-body-tertiary" playsinline autoplay muted id="player"
+                                poster="{{ url_for('static', filename='img/load-screen.svg') }}">
+                            </video>
+                        </div>
+                        <div id="external-camera-container" style="display: none;">
+                            <img class="w-100 rounded-3 bg-body-tertiary" id="external-camera-preview"
+                                alt="External camera preview"
+                                src="{{ url_for('static', filename='img/load-screen.svg') }}">
+                        </div>
+                        <div id="camera-unavailable" class="text-center text-muted py-5" style="display: none;">
+                            <p class="display-1 mb-2">
+                                {{ macro.bi_icon("camera-video-off") }}
+                            </p>
+                            <p class="display-6 mb-2">No camera source available</p>
+                            <p class="mb-0">Set up an external camera in <strong>Setup -> Camera</strong>.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-header d-flex align-items-center justify-content-between">
+                        <span class="fs-6">Printer Control</span>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-outline-danger" id="control-home-all" title="Home All">
+                                {{ macro.bi_icon("house-fill") }} Home All
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <!-- XY Control -->
+                            <div class="col-md-6 text-center">
+                                <div class="fw-bold mb-3 small text-muted">XY Axis (Bed / Extruder)</div>
+                                <div class="d-inline-block position-relative" style="width: 160px; height: 160px;">
+                                    <!-- Y+ (Bed Back) -->
+                                    <button type="button"
+                                        class="btn btn-secondary position-absolute top-0 start-50 translate-middle-x"
+                                        id="move-y-plus" style="width: 50px; height: 45px;" title="Bed Back">
+                                        {{ macro.bi_icon("chevron-up") }}
+                                    </button>
+                                    <!-- Y- (Bed Front) -->
+                                    <button type="button"
+                                        class="btn btn-secondary position-absolute bottom-0 start-50 translate-middle-x"
+                                        id="move-y-minus" style="width: 50px; height: 45px;" title="Bed Front">
+                                        {{ macro.bi_icon("chevron-down") }}
+                                    </button>
+                                    <!-- X- (Extruder Left) -->
+                                    <button type="button"
+                                        class="btn btn-secondary position-absolute top-50 start-0 translate-middle-y"
+                                        id="move-x-minus" style="width: 50px; height: 45px;" title="Extruder Left">
+                                        {{ macro.bi_icon("chevron-left") }}
+                                    </button>
+                                    <!-- X+ (Extruder Right) -->
+                                    <button type="button" class="btn btn-secondary position-absolute top-50 end-0 translate-middle-y"
+                                        id="move-x-plus" style="width: 50px; height: 45px;" title="Extruder Right">
+                                        {{ macro.bi_icon("chevron-right") }}
+                                    </button>
+                                    <!-- Home XY -->
+                                    <button type="button" class="btn btn-primary position-absolute top-50 start-50 translate-middle"
+                                        id="control-home-xy" style="width: 50px; height: 45px;" title="Home XY">
+                                        {{ macro.bi_icon("house") }}
+                                    </button>
+                                </div>
+                            </div>
+                            <!-- Z Control -->
+                            <div class="col-md-6 text-center">
+                                <div class="fw-bold mb-3 small text-muted">Z Axis (Height)</div>
+                                <div class="d-inline-flex flex-column gap-2 align-items-center justify-content-center"
+                                    style="height: 160px;">
+                                    <!-- Z+ (Extruder Up) -->
+                                    <button type="button" class="btn btn-secondary" id="move-z-plus"
+                                        style="width: 60px; height: 50px;" title="Extruder Up">
+                                        {{ macro.bi_icon("chevron-double-up") }}
+                                    </button>
+                                    <!-- Home Z -->
+                                    <button type="button" class="btn btn-primary" id="control-home-z"
+                                        style="width: 60px; height: 45px;" title="Home Z">
+                                        {{ macro.bi_icon("house") }}
+                                    </button>
+                                    <!-- Z- (Extruder Down) -->
+                                    <button type="button" class="btn btn-secondary" id="move-z-minus"
+                                        style="width: 60px; height: 50px;" title="Extruder Down">
+                                        {{ macro.bi_icon("chevron-double-down") }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Step Distance Selector -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="btn-group w-100" role="group" aria-label="Step Distance">
+                                    <input type="radio" class="btn-check" name="step-dist" id="step-1" value="1"
+                                        checked>
+                                    <label class="btn btn-outline-primary" for="step-1">1mm</label>
+                                    <input type="radio" class="btn-check" name="step-dist" id="step-10" value="10">
+                                    <label class="btn btn-outline-primary" for="step-10">10mm</label>
+                                    <input type="radio" class="btn-check" name="step-dist" id="step-20" value="20">
+                                    <label class="btn btn-outline-primary" for="step-20">20mm</label>
+                                    <input type="radio" class="btn-check" name="step-dist" id="step-50" value="50">
+                                    <label class="btn btn-outline-primary" for="step-50">50mm</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- Temperature Graph -->
+                <div class="card mt-3">
+                    <div class="card-header fs-6 d-flex justify-content-between align-items-center"
+                        data-bs-toggle="collapse" data-bs-target="#temp-graph-section" role="button"
+                        aria-expanded="true" aria-controls="temp-graph-section">
+                        {{ macro.bi_icon("thermometer-half") }} Temperature Graph
+                        {{ macro.bi_icon("chevron-down") }}
+                    </div>
+                    <div class="collapse show" id="temp-graph-section">
+                        <div class="card-body">
+                            <div class="btn-group btn-group-sm mb-2 w-100" role="group" aria-label="Time window">
+                                <button type="button" class="btn btn-outline-secondary temp-window active"
+                                    data-window="300">5m</button>
+                                <button type="button" class="btn btn-outline-secondary temp-window"
+                                    data-window="900">15m</button>
+                                <button type="button" class="btn btn-outline-secondary temp-window"
+                                    data-window="1800">30m</button>
+                                <button type="button" class="btn btn-outline-secondary temp-window"
+                                    data-window="3600">1h</button>
+                            </div>
+                            <div style="position: relative; height: 300px; width: 100%;">
+                                <canvas id="temp-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="col-md-12 col-lg-6 col-xl-4">
                 <div class="card">
@@ -45,127 +176,189 @@
                             {{ printer.name }} ({{ printer.sn }})
                         </div>
                         <span id="badge-mqtt" class="badge">MQTT</span>
-                        <span id="badge-pppp" class="badge">PPPP</span>
+                        <span id="badge-pppp" class="badge text-bg-secondary">PPPP</span>
                         {% if video_supported %}
                         <span id="badge-video" class="badge">VIDEO</span>
                         {% endif %}
                         <span id="badge-ctrl" class="badge">CTRL</span>
-                    </div>
-                    {% endif %}
-                    {% if video_supported %}
-                    <div class="card-header fs-6">Video Controls</div>
-                    <div class="card-body">
-                        <div class="row g-3 mb-3">
-                            <div class="col-6">
-                                <button class="w-100 btn btn-secondary" id="light-on">
-                                    {{ macro.bi_icon("lightbulb", "Light on") }}
-                                </button>
-                            </div>
-                            <div class="col-6">
-                                <button class="w-100 btn btn-secondary" id="light-off">
-                                    {{ macro.bi_icon("lightbulb-off", "Light off") }}
-                                </button>
-                            </div>
-                        </div>
-                        <div class="row g-3">
-                            <div class="col-6">
-                                <button class="w-100 btn btn-secondary" id="quality-low">
-                                    {{ macro.bi_icon("badge-sd", "SD Quality") }}
-                                </button>
-                            </div>
-                            <div class="col-6">
-                                <button class="w-100 btn btn-secondary" id="quality-high">
-                                    {{ macro.bi_icon("badge-hd", "HD Quality") }}
-                                </button>
-                            </div>
+                        <div id="mqtt-reconnect-hint" class="mt-2" style="display:none">
+                            <button id="btn-mqtt-reconnect" class="btn btn-sm btn-outline-warning">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                                     fill="currentColor" class="bi bi-arrow-clockwise me-1"
+                                     viewBox="0 0 16 16">
+                                  <path fill-rule="evenodd"
+                                    d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
+                                  <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284
+                                    0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
+                                </svg>Reconnect
+                            </button>
+                            <small class="text-muted ms-2">No printer response</small>
                         </div>
                     </div>
                     {% endif %}
-                    <div class="card-header fs-6">Temperature</div>
-                    <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <div class="input-group">
-                                    <div class="input-group-text mx-auto" id="nozzleGroup">
-                                        <i class="icon icon-hotend"></i>
+                    <div class="card-header d-flex align-items-center justify-content-between">
+                        <span class="fs-6">Upload Progress</span>
+                        <button class="btn btn-sm btn-outline-secondary collapse-toggle" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#upload-progress-section" aria-expanded="true"
+                            aria-controls="upload-progress-section">
+                            {{ macro.bi_icon("chevron-down") }}
+                        </button>
+                    </div>
+                    <div class="collapse show" id="upload-progress-section">
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <div class="progress position-relative" id="uploadProgress">
+                                        <div class="progress-bar progress-bar-striped progress-bar-animated fs-6"
+                                            role="progressbar" id="upload-progressbar" title="Upload Progress"
+                                            aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" style="width: 0%">
+                                            <span id="upload-progress" class="position-absolute w-100 fw-bold">
+                                                0%
+                                            </span>
+                                        </div>
                                     </div>
-                                    <span
-                                        id="nozzle-temp"
-                                        class="form-control text-center"
-                                        title="Current Nozzle Temperature"
-                                        aria-describedby="nozzleGroup"
-                                    >
-                                        0°C
-                                    </span>
-                                    <button
-                                        type="button" class="btn btn-secondary"
-                                        id="set-nozzle-temp"
-                                        name="set-nozzle-temp"
-                                        class="input-group-text"
-                                        title="Target Nozzle Temperature"
-                                        aria-label="Target Nozzle Temperature"
-                                        aria-describedby="nozzleGroup"
-                                        data-bs-toggle="modal" data-bs-target="#popupModalInput"
-                                        data-input-type="number"
-                                        data-input-min="0"
-                                        data-input-max="300"
-                                        data-input-icon-class="icon-hotend"
-                                        data-input-unit="°C"
-                                        disabled
-                                    >
-                                        0°C
-                                    </button>
+                                    <div class="form-text mt-2" id="upload-progress-meta">Idle</div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="input-group">
-                                    <div class="input-group-text mx-auto" id="bedGroup">
-                                        <i class="icon icon-bed"></i>
+                        </div>
+                    </div>
+                    <div class="card-header d-flex align-items-center justify-content-between">
+                        <span class="fs-6">Camera Controls</span>
+                        <button class="btn btn-sm btn-outline-secondary collapse-toggle" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#video-controls-section" aria-expanded="true"
+                            aria-controls="video-controls-section">
+                            {{ macro.bi_icon("chevron-down") }}
+                        </button>
+                    </div>
+                    <div class="collapse show" id="video-controls-section">
+                        <div class="card-body">
+                            <div class="row g-3 mb-3">
+                                <div class="col-12">
+                                    <div id="printer-camera-controls">
+                                        <div class="row g-2">
+                                            <div class="col-6" id="light-on-col">
+                                                <button class="w-100 btn btn-secondary camera-control-btn" id="light-on" aria-pressed="false">
+                                                    {{ macro.bi_icon("lightbulb", "Light on") }}
+                                                </button>
+                                            </div>
+                                            <div class="col-6" id="light-off-col">
+                                                <button class="w-100 btn btn-secondary camera-control-btn" id="light-off" aria-pressed="false">
+                                                    {{ macro.bi_icon("lightbulb-off", "Light off") }}
+                                                </button>
+                                            </div>
+                                            <div class="col-6" id="printer-video-toggle-col">
+                                                <button class="w-100 btn btn-secondary camera-control-btn" id="video-toggle">
+                                                    {{ macro.bi_icon("camera-video") }} Enable Video
+                                                </button>
+                                            </div>
+                                            <div class="col-6" id="printer-snapshot-col">
+                                                <button class="w-100 btn btn-secondary camera-control-btn" id="snapshot-btn" title="Download Snapshot">
+                                                    {{ macro.bi_icon("camera") }} Snapshot
+                                                </button>
+                                            </div>
+                                        </div>
                                     </div>
-                                    <span
-                                        id="bed-temp"
-                                        class="form-control text-center"
-                                        title="Current Bed Temperature"
-                                        aria-describedby="bedGroup"
-                                    >
-                                        0°C
-                                    </span>
-                                    <button
-                                        type="button" class="btn btn-secondary"
-                                        id="set-bed-temp"
-                                        name="set-bed-temp"
-                                        class="input-group-text"
-                                        title="Target Bed Temperature"
-                                        aria-label="Target Bed Temperature"
-                                        aria-describedby="bedGroup"
-                                        data-bs-toggle="modal" data-bs-target="#popupModalInput"
-                                        data-input-type="number"
-                                        data-input-min="0"
-                                        data-input-max="100"
-                                        data-input-icon-class="icon-bed"
-                                        data-input-unit="°C"
-                                        disabled
-                                    >
-                                        0°C
-                                    </button>
+                                    <div id="external-camera-controls" class="d-none mt-2">
+                                        <div class="row g-2">
+                                            <div class="col-6">
+                                                <button class="w-100 btn btn-secondary camera-control-btn external-preview-toggle" id="external-preview-toggle" aria-pressed="true">
+                                                    {{ macro.bi_icon("camera-video-off", "Disable Preview") }}
+                                                </button>
+                                            </div>
+                                            <div class="col-6">
+                                                <button class="w-100 btn btn-secondary camera-control-btn" id="snapshot-btn-secondary" title="Download Snapshot">
+                                                    {{ macro.bi_icon("camera") }} Snapshot
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row g-3" id="printer-camera-quality-wrap">
+                                <div class="col-12">
+                                    <label class="form-label">Live View Quality</label>
+                                    <div class="row g-3">
+                                        {% for profile in video_profiles %}
+                                        {% if profile.live %}
+                                        <div class="col-6">
+                                            <button type="button"
+                                                class="w-100 btn btn-secondary video-profile-btn{% if video_profile_default == profile.id %} active{% endif %}"
+                                                data-video-profile="{{ profile.id }}"
+                                                aria-pressed="{% if video_profile_default == profile.id %}true{% else %}false{% endif %}">
+                                                {{ profile.label }}
+                                            </button>
+                                        </div>
+                                        {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                    <div class="form-text" id="video-resolution">Current: -</div>
+                                    <div class="form-text">Live view supports SD/HD; snapshots can be higher.</div>
                                 </div>
                             </div>
                         </div>
                     </div>
                     <div class="card-header fs-6">Print Progress</div>
                     <div class="card-body">
-                        <div class="row mb-3 g-3">
+                        <div class="row mb-3 g-3" id="print-controls">
                             <div class="col-12">
                                 <div class="input-group">
                                     <div class="input-group-text print-info-label" id="printName">Name</div>
-                                    <span
-                                        id="print-name"
-                                        class="form-control"
-                                        title="Print Name"
-                                        aria-describedby="printName"
-                                    >
+                                    <span id="print-name" class="form-control" title="Print Name"
+                                        aria-describedby="printName">
                                     </span>
                                 </div>
+                            </div>
+                        </div>
+                        <div class="row mb-2 g-2">
+                            <div class="col-6">
+                                <div class="input-group input-group-sm">
+                                    <div class="input-group-text d-none d-sm-block">
+                                        <i class="icon icon-hotend"></i>
+                                    </div>
+                                    <span id="nozzle-temp" class="form-control text-center bg-body-tertiary px-1"
+                                        title="Current Nozzle">
+                                        0°C
+                                    </span>
+                                    <input type="number" id="set-nozzle-temp" class="form-control text-center px-1"
+                                        value="0" min="0" max="{{ 300 if printer and 'M5C' in printer.model else 260 }}" />
+                                    <span class="input-group-text">°C</span>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="input-group input-group-sm">
+                                    <div class="input-group-text d-none d-sm-block">
+                                        <i class="icon icon-bed"></i>
+                                    </div>
+                                    <span id="bed-temp" class="form-control text-center bg-body-tertiary px-1"
+                                        title="Current Bed">
+                                        0°C
+                                    </span>
+                                    <input type="number" id="set-bed-temp" class="form-control text-center px-1"
+                                        value="0" min="0" max="100" />
+                                    <span class="input-group-text">°C</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3 g-2 justify-content-center">
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-sm btn-outline-info preheat-preset"
+                                    data-nozzle="200" data-bed="60">PLA</button>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-sm btn-outline-info preheat-preset"
+                                    data-nozzle="240" data-bed="80">PETG</button>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-sm btn-outline-info preheat-preset"
+                                    data-nozzle="250" data-bed="100">ABS</button>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-sm btn-outline-info preheat-preset"
+                                    data-nozzle="230" data-bed="50">TPU</button>
+                            </div>
+                            <div class="col-auto">
+                                <button type="button" class="btn btn-sm btn-outline-danger preheat-preset"
+                                    data-nozzle="0" data-bed="0">Cooldown</button>
                             </div>
                         </div>
                         <div class="row mb-3 g-3">
@@ -174,12 +367,8 @@
                                     <div class="input-group-text print-info-label" id="timeElapsed">
                                         <i class="icon icon-time-passed"></i>
                                     </div>
-                                    <span
-                                        id="time-elapsed"
-                                        class="form-control text-center"
-                                        title="Time Elapsed"
-                                        aria-describedby="timeElapsed"
-                                    >
+                                    <span id="time-elapsed" class="form-control text-center" title="Time Elapsed"
+                                        aria-describedby="timeElapsed">
                                         00:00:00
                                     </span>
                                 </div>
@@ -189,12 +378,8 @@
                                     <div class="input-group-text print-info-label" id="timeRemain">
                                         <i class="icon icon-time-remaining"></i>
                                     </div>
-                                    <span
-                                        id="time-remain"
-                                        class="form-control text-center"
-                                        title="Time Remaining"
-                                        aria-describedby="timeRemain"
-                                    >
+                                    <span id="time-remain" class="form-control text-center" title="Time Remaining"
+                                        aria-describedby="timeRemain">
                                         00:00:00
                                     </span>
                                 </div>
@@ -203,16 +388,9 @@
                         <div class="row mb-3 g-3">
                             <div class="col-12">
                                 <div class="progress position-relative" id="printProgress">
-                                    <div
-                                        class="progress-bar progress-bar-striped progress-bar-animated fs-5"
-                                        role="progressbar"
-                                        id="progressbar"
-                                        title="Progress Bar"
-                                        aria-valuenow="0"
-                                        aria-valuemin="0"
-                                        aria-valuemax="100"
-                                        style="width: 0%"
-                                    >
+                                    <div class="progress-bar progress-bar-striped progress-bar-animated fs-5"
+                                        role="progressbar" id="progressbar" title="Progress Bar" aria-valuenow="0"
+                                        aria-valuemin="0" aria-valuemax="100" style="width: 0%">
                                         <span id="progress" class="position-absolute w-100 fw-bold">
                                             0%
                                         </span>
@@ -220,37 +398,113 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <div class="input-group">
-                                    <div class="input-group-text print-info-label" id="printLayer">
-                                        {{ macro.bi_icon("layers-half") }}
-                                    </div>
-                                    <span
-                                        id="print-layer"
-                                        class="form-control text-center"
-                                        title="Print Layers"
-                                        aria-describedby="printLayer"
-                                    >
-                                        0/0
-                                    </span>
+                        <div class="row mb-3 g-3" id="print-controls-btns">
+                            <div class="col-12 text-center">
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-warning d-none" id="print-pause" title="Pause Print">
+                                        {{ macro.bi_icon("pause-fill") }} Pause
+                                    </button>
+                                    <button type="button" class="btn btn-success d-none" id="print-resume"
+                                        title="Resume Print">
+                                        {{ macro.bi_icon("play-fill") }} Resume
+                                    </button>
+                                    <button type="button" class="btn btn-danger d-none" id="print-stop" title="Stop Print">
+                                        {{ macro.bi_icon("stop-fill") }} Stop
+                                    </button>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="input-group">
-                                    <div class="input-group-text print-info-label" id="printSpeed">
-                                        {{ macro.bi_icon("speedometer") }}
-                                    </div>
-                                    <span
-                                        id="print-speed"
-                                        class="form-control text-center small"
-                                        title="Print Speed"
-                                        aria-describedby="printSpeed"
-                                    >
-                                        0mm/s
-                                    </span>
+                        </div>
+                        <div class="print-telemetry-grid">
+                            <div class="print-telemetry-item">
+                                <div class="print-telemetry-heading">
+                                    {{ macro.bi_icon("layers-half", class="print-telemetry-icon") }}
+                                    <div class="print-telemetry-label">Layer</div>
+                                </div>
+                                <div id="print-layer" class="print-telemetry-value">0 / 0</div>
+                            </div>
+                            <div class="print-telemetry-item">
+                                <div class="print-telemetry-heading">
+                                    {{ macro.bi_icon("speedometer", class="print-telemetry-icon") }}
+                                    <div class="print-telemetry-label">Speed</div>
+                                </div>
+                                <div id="print-speed" class="print-telemetry-value print-telemetry-value-speed">0 mm/s</div>
+                            </div>
+                            <div class="print-telemetry-item">
+                                <div class="print-telemetry-heading">
+                                    {{ macro.bi_icon("fan", class="print-telemetry-icon") }}
+                                    <div class="print-telemetry-label">Fan</div>
+                                </div>
+                                <div id="fan-speed" class="print-telemetry-value">– %</div>
+                                <div class="fan-speed-meter" aria-hidden="true">
+                                    <span id="fan-speed-meter-fill"></span>
                                 </div>
                             </div>
+                        </div>
+                        <div class="row g-3 mt-0">
+                            <div class="col-12">
+                                <div class="input-group">
+                                    <div class="input-group-text print-info-label" id="filamentState">
+                                        {{ macro.bi_icon("droplet-fill") }}
+                                    </div>
+                                    <span id="filament-state" class="form-control text-center small" title="Filament State"
+                                        aria-describedby="filamentState">
+                                        Unknown
+                                    </span>
+                                </div>
+                                <div id="filament-state-detail" class="form-text text-center small d-none"></div>
+                                <div id="timelapse-runtime-detail" class="form-text text-center small d-none"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+        </div>
+        <div class="row g-3 mt-1">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex align-items-center justify-content-between gap-2">
+                        <div class="d-flex flex-column">
+                            <span class="fs-6">Live Console</span>
+                            <span class="small text-muted" id="home-console-status">Loading recent output...</span>
+                        </div>
+                        <button class="btn btn-sm btn-outline-secondary collapse-toggle" type="button"
+                            data-bs-toggle="collapse" data-bs-target="#home-console-section" aria-expanded="true"
+                            aria-controls="home-console-section">
+                            {{ macro.bi_icon("chevron-down") }}
+                        </button>
+                    </div>
+                    <div class="collapse show" id="home-console-section">
+                        <div class="card-body p-0">
+                            <div class="d-flex flex-column gap-2 p-3 pb-0">
+                                <div class="d-flex flex-wrap gap-2">
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="home-console-clear">
+                                        {{ macro.bi_icon("eraser") }} Clear
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="home-console-autoscroll-toggle"
+                                        aria-pressed="false">
+                                        {{ macro.bi_icon("pause-circle") }} Pause Auto-Scroll
+                                    </button>
+                                </div>
+                                <div class="d-flex flex-wrap align-items-center gap-1">
+                                    <span class="small text-muted me-1">Filter:</span>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary active" data-home-console-filter="all"
+                                        aria-pressed="true">All</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-home-console-filter="mqtt"
+                                        aria-pressed="false">MQTT</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-home-console-filter="pppp"
+                                        aria-pressed="false">PPPP</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-home-console-filter="video"
+                                        aria-pressed="false">Video</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-home-console-filter="upload"
+                                        aria-pressed="false">Upload</button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" data-home-console-filter="error"
+                                        aria-pressed="false">Error</button>
+                                </div>
+                            </div>
+                            <pre id="home-console-pre" class="bg-dark text-light p-3 mt-3 mb-0 border-0 small font-monospace"
+                                style="height: 260px; overflow-y: auto; white-space: pre-wrap;"><code id="home-console-content">Loading console output...</code></pre>
                         </div>
                     </div>
                 </div>

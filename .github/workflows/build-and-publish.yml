@@ -1,114 +1,287 @@
-name: Docker Image CI
+name: Release
 
 on:
   push:
     tags:
-     - v**
-    branches:
-      - 'upcoming/*'
-      - 'main'
-    paths-ignore:
-      - '**.md'
-      - 'documentation/**'
-      - 'LICENSE'
-      - '.gitignore'
-      - '.gitattributes'
-      - '.editorconfig'
-      - '.vscode/**'
-  pull_request:
-    branches: [ main ]
-    paths-ignore:
-      - '**.md'
-      - 'documentation/**'
-      - 'LICENSE'
-      - '.gitignore'
-      - '.gitattributes'
-      - '.editorconfig'
-      - '.vscode/**'
-  workflow_dispatch:
-     
+      - v**
+
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
-  build:
+  docker-publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Log into registry ${{ env.REGISTRY }}
+        uses: docker/login-action@v4.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker Setup QEMU
+        uses: docker/setup-qemu-action@v4.2.0
+
+      - name: Docker Setup Buildx
+        uses: docker/setup-buildx-action@v4.3.0
+        with:
+          version: latest
+          install: true
+
+      - name: Docker Metadata action
+        id: meta
+        uses: docker/metadata-action@v6.2.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          flavor: |
+            latest=${{ github.event_name == 'push' }}
+          tags: |
+            type=semver,pattern={{version}}
+
+      - name: Build and push Docker images
+        uses: docker/build-push-action@v7.3.0
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/arm/v7,linux/arm64,linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  ha-docker-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: docker-publish
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Log into registry ${{ env.REGISTRY }}
+        uses: docker/login-action@v4.6.0
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker Setup QEMU
+        uses: docker/setup-qemu-action@v4.2.0
+
+      - name: Docker Setup Buildx
+        uses: docker/setup-buildx-action@v4.3.0
+        with:
+          version: latest
+          install: true
+
+      - name: Docker Metadata action
+        id: meta
+        uses: docker/metadata-action@v6.2.0
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-ha
+          flavor: |
+            latest=${{ github.event_name == 'push' }}
+          tags: |
+            type=semver,pattern={{version}}
+
+      - name: Extract semver tag and lowercase image name for BUILD_FROM
+        id: version
+        run: |
+          echo "tag=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+          echo "image_lc=$(echo '${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
+
+      - name: Build and push HA Supervisor addon image
+        uses: docker/build-push-action@v7.3.0
+        with:
+          context: hassio-addon
+          file: hassio-addon/Dockerfile
+          build-args: BUILD_FROM=${{ env.REGISTRY }}/${{ steps.version.outputs.image_lc }}:${{ steps.version.outputs.tag }}
+          platforms: linux/arm/v7,linux/arm64,linux/amd64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  update-ha-config:
+    runs-on: ubuntu-latest
+    needs: ha-docker-publish
     permissions:
       contents: write
-      packages: write
-      
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-      with:
-        submodules: recursive
-      
-    - name: Log into registry ${{ env.REGISTRY }}
-      if: github.event_name != 'pull_request'
-      uses: docker/login-action@v2.1.0
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Docker Setup QEMU
-      uses: docker/setup-qemu-action@v2.1.0
-      
-    - name: Docker Setup Buildx
-      uses: docker/setup-buildx-action@v2.5.0
-      with:
-        version: latest
-        install: true
-        
-    - name: Docker Metadata action
-      id: meta
-      if: github.event_name != 'pull_request'
-      uses: docker/metadata-action@v4.3.0
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-        flavor: |
-          latest=${{ github.ref == 'refs/heads/main' }}
-        tags: |
-          type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
-          type=edge,value=edge,enable=${{ startsWith(github.ref, 'refs/heads/upcoming/') }}
-          type=raw,value=upcoming,enable=${{ startsWith(github.ref, 'refs/heads/upcoming/') }}
-          type=ref,event=tag
-        
-    - name: Build and push Docker images
-      uses: docker/build-push-action@v4.0.0
-      with:
-        context: .
-        file: Dockerfile
-        platforms: linux/arm/v7,linux/arm64,linux/amd64
-        push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-    
-    - name: Create release directory
-      if: startsWith(github.ref, 'refs/tags/')
-      run: mkdir release
-      
-    - name: Zip Release
-      if: startsWith(github.ref, 'refs/tags/')
-      uses: TheDoctor0/zip-release@0.7.1
-      with:
-        type: 'zip'
-        filename: release/ankerctl-${{ github.ref_name }}.zip
-        exclusions: '*.git* /*release/*'
-        
-    - name: GZip Release
-      if: startsWith(github.ref, 'refs/tags/')
-      uses: TheDoctor0/zip-release@0.7.1
-      with:
-        type: 'tar'
-        filename: release/ankerctl-${{ github.ref_name }}.tar.gz
-        exclusions: '*.git* release'
-        
-    - name: Release
-      if: startsWith(github.ref, 'refs/tags/')
-      uses: docker://antonyurchenko/git-release:v5.0.1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        args: release/ankerctl*
+    steps:
+      - name: Checkout master
+        uses: actions/checkout@v7
+        with:
+          ref: master
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Bump version in hassio-addon/config.yaml
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          sed -i "s/^version: .*/version: \"${VERSION}\"/" hassio-addon/config.yaml
+
+      - name: Commit and push if version changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add hassio-addon/config.yaml
+          git diff --cached --quiet && echo "No change, skipping commit" && exit 0
+          git commit -m "Update HA addon version to ${GITHUB_REF_NAME#v}"
+          git push
+
+  source-archives:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Create source release archives
+        run: |
+          mkdir -p release
+          zip -r "release/ankerctl-${{ github.ref_name }}.zip" . -x '*.git*' 'release/*' 'dist/*'
+          tar -czf "release/ankerctl-${{ github.ref_name }}.tar.gz" \
+            --exclude-vcs \
+            --exclude='./release' \
+            --exclude='./dist' \
+            .
+
+      - name: Upload source release artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-source
+          path: release/ankerctl-${{ github.ref_name }}.*
+          if-no-files-found: error
+
+  native-bundles:
+    name: Native Bundle (${{ matrix.target }})
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            target: linux-amd64
+            archive_name: ankerctl-${{ github.ref_name }}-linux-amd64.tar.gz
+          - runner: windows-latest
+            target: windows-amd64
+            archive_name: ankerctl-${{ github.ref_name }}-windows-amd64.zip
+          - runner: macos-15-intel
+            target: macos-amd64
+            archive_name: ankerctl-${{ github.ref_name }}-macos-amd64.tar.gz
+          - runner: macos-14
+            target: macos-arm64
+            archive_name: ankerctl-${{ github.ref_name }}-macos-arm64.tar.gz
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install bundling dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt "pyinstaller<7"
+
+      - name: Build native bundle
+        run: python -m PyInstaller --noconfirm --clean packaging/pyinstaller/ankerctl.spec
+
+      - name: Smoke test Linux/macOS bundle
+        if: runner.os != 'Windows'
+        run: ./dist/ankerctl/ankerctl --help >/dev/null
+
+      - name: Smoke test Windows bundle
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: .\dist\ankerctl\ankerctl.exe --help | Out-Null
+
+      - name: Create Linux/macOS archive
+        if: runner.os != 'Windows'
+        run: |
+          mkdir -p release
+          tar -C dist -czf "release/${{ matrix.archive_name }}" ankerctl
+
+      - name: Create Windows archive
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path release -Force | Out-Null
+          Compress-Archive -Path dist/ankerctl -DestinationPath "release/${{ matrix.archive_name }}"
+
+      - name: Upload native bundle
+        uses: actions/upload-artifact@v7
+        with:
+          name: release-${{ matrix.target }}
+          path: release/${{ matrix.archive_name }}
+          if-no-files-found: error
+
+  release:
+    runs-on: ubuntu-latest
+    needs:
+      - source-archives
+      - native-bundles
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Download release artifacts
+        uses: actions/download-artifact@v8
+        with:
+          path: release
+          merge-multiple: true
+
+      - name: Extract changelog for this version
+        id: changelog
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          python3 - <<'EOF' > release_notes.md
+          import re, os, sys
+          version = os.environ["GITHUB_REF_NAME"].lstrip("v")
+          text = open("CHANGELOG.md").read()
+          pattern = rf"## \[{re.escape(version)}\][^\n]*\n(.*?)(?=\n## \[|\Z)"
+          m = re.search(pattern, text, re.DOTALL)
+          if not m:
+              print(f"No changelog entry found for {version}", file=sys.stderr)
+              sys.exit(1)
+          print(m.group(1).strip())
+          EOF
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v3
+        with:
+          body_path: release_notes.md
+          files: release/ankerctl*

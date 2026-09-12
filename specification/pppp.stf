@@ -178,8 +178,8 @@ enum P2PCmdType
     APP_CMD_MAKER_NOTIFY_PAYLOAD      = 0x6a5
     PC_CMD_FILE_RECV                  = 0x3a98
 
-    P2P_JSON_CMD              = 0x6a4
-    P2P_SEND_FILE             = 0x3a98
+    P2P_JSON_CMD              = 0x6a4  # alias for APP_CMD_MAKER_SET_PAYLOAD — used for JSON command payloads
+    P2P_SEND_FILE             = 0x3a98 # alias for PC_CMD_FILE_RECV — used for file transfer initiation
 
 enum P2PSubCmdType
     @type: u16le

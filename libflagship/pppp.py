@@ -330,9 +330,13 @@ class _Host:
 class _Duid:
 
     @classmethod
-    def from_string(cls, str):
-        prefix, serial, check = str.split("-")
-        return cls(prefix, int(serial), check)
+    def from_string(cls, duid_str):
+        try:
+            prefix, serial, check = duid_str.split("-")
+            serial = int(serial)
+        except ValueError as exc:
+            raise ValueError("Invalid DUID format, expected PREFIX-SERIAL-CHECK") from exc
+        return cls(prefix, serial, check)
 
     def __str__(self):
         return f"{self.prefix}-{self.serial:06}-{self.check}"
@@ -1187,4 +1191,3 @@ MessageTypeTable = {
     Type.CLOSE                : PktClose,
     Type.REPORT_SESSION_READY : PktSessionReady,
 }
-

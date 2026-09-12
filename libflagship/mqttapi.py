@@ -6,6 +6,7 @@ import json
 import uuid
 from datetime import datetime, timedelta
 
+from libflagship import ROOT_DIR
 from libflagship.mqtt import MqttMsg, MqttPktType
 
 
@@ -51,7 +52,7 @@ class AnkerMQTTBaseClient:
         try:
             pkt, tail = MqttMsg.parse(msg.payload, key=self._key)
         except Exception as E:
-            hexStr = ' '.join([f'0x{byte:02x}' for byte in msg.payload])
+            hexStr =' '.join([f'0x{byte:02x}' for byte in msg.payload])
             log.error(f"Failed to decode mqtt message\n Exception: {E}\n Message : {hexStr}")
             return
 
@@ -71,10 +72,19 @@ class AnkerMQTTBaseClient:
         pass
 
     @classmethod
-    def login(cls, printersn, username, password, key, ca_certs=None, verify=True):
+    def login(cls, printersn, username, password, key, ca_certs=None, verify=True, ca_cert=None):
         client = mqtt.Client()
-        cert_reqs = ssl.CERT_NONE if not verify else ssl.VERIFY_DEFAULT
-        client.tls_set(ca_certs=ca_certs, cert_reqs=cert_reqs)
+        if ca_cert is None:
+            ca_cert = ca_certs
+
+        if verify:
+            if ca_cert is None:
+                ca_cert = ROOT_DIR / "ssl/ankermake-mqtt.crt"
+            context = ssl.create_default_context(cafile=str(ca_cert))
+            client.tls_set_context(context)
+        else:
+            client.tls_set(cert_reqs=ssl.CERT_NONE)
+
         client.tls_insecure_set(not verify)
         client.username_pw_set(username, password)
 
@@ -111,11 +121,11 @@ class AnkerMQTTBaseClient:
             m5=2,
             m6=5,
             m7=ord('F'),
-            packet_type=packet_type,
+            packet_type=MqttPktType.Single,
             packet_num=0,
             time=0,
             device_guid=guid,
-            padding=b'', # fixed by .pack()
+            padding=b'\x00' * 11,
             data=data,
         )
 
@@ -129,6 +139,19 @@ class AnkerMQTTBaseClient:
 
     def command(self, msg):
         return self.send(f"/device/maker/{self.sn}/command", msg)
+
+    def subscribe_device_topics(self, wildcard=False):
+        """Also listen to app-to-printer topics when broker ACLs permit it."""
+        topics = [
+            f"/device/maker/{self.sn}/command",
+            f"/device/maker/{self.sn}/query",
+        ]
+        if wildcard:
+            topics.append(f"/device/maker/{self.sn}/#")
+
+        for topic in topics:
+            self._mqtt.subscribe(topic)
+        return topics
 
     def loop(self):
         self._mqtt.loop_forever()
@@ -161,3 +184,40 @@ class AnkerMQTTBaseClient:
                         return obj
 
         return None
+
+    def await_responses(self, msgtype, timeout=10, collect_window=3.0):
+        """Collect ALL matching MQTT responses within a time window.
+
+        Waits up to `timeout` seconds for the first matching message, then
+        keeps listening for `collect_window` more seconds to catch any
+        follow-up packets the firmware may send for long GCode responses.
+
+        Returns a list of matching response objects (may be empty).
+        """
+        msgtype = int(msgtype)
+        results = []
+
+        # Phase 1: wait for first response
+        end = datetime.now() + timedelta(seconds=timeout)
+        while datetime.now() < end:
+            self._mqtt.loop(timeout=min(0.1, (end - datetime.now()).total_seconds()))
+            for _, body in self.clear_queue():
+                for obj in body:
+                    if obj["commandType"] == msgtype:
+                        results.append(obj)
+            if results:
+                break
+
+        if not results:
+            return results
+
+        # Phase 2: keep collecting for collect_window seconds
+        window_end = datetime.now() + timedelta(seconds=collect_window)
+        while datetime.now() < window_end:
+            self._mqtt.loop(timeout=min(0.1, (window_end - datetime.now()).total_seconds()))
+            for _, body in self.clear_queue():
+                for obj in body:
+                    if obj["commandType"] == msgtype:
+                        results.append(obj)
+
+        return results

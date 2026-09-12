@@ -1,189 +1,1023 @@
-<div
-    class="tab-pane fade{% if not configure %} show active{% endif %}"
-    id="setup"
-    role="tabpanel"
-    aria-labelledby="setup-tab"
->
+<div class="tab-pane fade{% if not configure %} show active{% endif %}" id="setup" role="tabpanel"
+    aria-labelledby="setup-tab">
     <div class="container">
         <div class="row g-3">
-            <div class="col-lg-6">
-                <form
-                    action="{{ url_for('app_api_ankerctl_config_login') }}"
-                    method="POST"
-                    class="mb-3"
-                    id="config-login-form"
-                >
-                    <div class="card">
-                        <div class="card-header fs-4">
-                            Fetch Config From AnkerMake Server
-                        </div>
+            <div class="col-12">
+                <!-- Setup pill navigation -->
+                <ul class="nav nav-pills setup-pills mb-3" id="setupTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="setup-account-tab" data-bs-toggle="pill"
+                            data-bs-target="#setup-account" type="button" role="tab" aria-controls="setup-account"
+                            aria-selected="true">
+                            {{ macro.bi_icon("person-circle") }} Account
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="setup-printer-tab" data-bs-toggle="pill"
+                            data-bs-target="#setup-printer-pane" type="button" role="tab"
+                            aria-controls="setup-printer-pane" aria-selected="false">
+                            {{ macro.bi_icon("printer") }} Printer
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="setup-camera-tab" data-bs-toggle="pill"
+                            data-bs-target="#setup-camera-pane" type="button" role="tab"
+                            aria-controls="setup-camera-pane" aria-selected="false">
+                            {{ macro.bi_icon("camera-video") }} Camera
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="setup-tools-tab" data-bs-toggle="pill"
+                            data-bs-target="#setup-tools" type="button" role="tab" aria-controls="setup-tools"
+                            aria-selected="false">
+                            {{ macro.bi_icon("wrench-adjustable") }} Tools
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="setup-launcher-tab" data-bs-toggle="pill"
+                            data-bs-target="#setup-launcher-pane" type="button" role="tab"
+                            aria-controls="setup-launcher-pane" aria-selected="false">
+                            {{ macro.bi_icon("download") }} Launcher
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="setup-notifications-tab" data-bs-toggle="pill"
+                            data-bs-target="#setup-notifications-pane" type="button" role="tab"
+                            aria-controls="setup-notifications-pane" aria-selected="false">
+                            {{ macro.bi_icon("bell") }} Notifications
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="setup-timelapse-tab" data-bs-toggle="pill"
+                            data-bs-target="#setup-timelapse-pane" type="button" role="tab"
+                            aria-controls="setup-timelapse-pane" aria-selected="false">
+                            {{ macro.bi_icon("camera-reels") }} Timelapse
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="setup-mqtt-tab" data-bs-toggle="pill"
+                            data-bs-target="#setup-mqtt-pane" type="button" role="tab" aria-controls="setup-mqtt-pane"
+                            aria-selected="false">
+                            {{ macro.bi_icon("share") }} Home Assistant
+                        </button>
+                    </li>
+                </ul>
 
-                        <div class="card-body">
-                            <div class="row mb-3 g-3">
-                                <div class="input-group">
-                                    <div class="input-group-text">Email</div>
-                                    <input
-                                        class="form-control"
-                                        type="email"
-                                        id="loginEmail"
-                                        name="login_email"
-                                        required
-                                        aria-required="true"
-                                        value="{{ config_existing_email }}"
-                                    />
-                                </div>
-                            </div>
-                            <div class="row mb-3 g-3">
-                                <div class="input-group">
-                                    <div class="input-group-text">Password</div>
-                                    <input
-                                        class="form-control"
-                                        type="password"
-                                        id="loginPassword"
-                                        name="login_password"
-                                        required
-                                        aria-required="true"
-                                    />
-                                </div>
-                            </div>
-                            <div class="row mb-3 g-3" id="captchaRow">
-                                <div class="input-group">
-                                    <div class="input-group-text text-danger-emphasis">Please solve CAPTCHA:</div>
-                                    <img id="loginCaptchaImg" />
-                                    <div class="input-group-text print-info-label">
-                                        {{ macro.bi_icon("arrow-right") }}
-                                    </div>
-                                    <input
-                                        type="hidden"
-                                        id="loginCaptchaId"
-                                        name="login_captcha_id"
-                                        autocomplete="off"
-                                        value=""
-                                    />
-                                    <input
-                                        class="form-control"
-                                        id="loginCaptchaText"
-                                        name="login_captcha_text"
-                                        autocomplete="off"
-                                        value=""
-                                    />
-                                </div>
-                            </div>
-                            <div class="row g-3 justify-content-between">
-                                <div class="col-md-8">
-                                    <div class="input-group">
-                                        <div class="input-group-text">Country</div>
-                                        <select
-                                            class="form-select"
-                                            id="loginCountry"
-                                            name="login_country"
-                                            aria-label="Region"
-                                            data-countrycodes="{{ country_codes }}"
-                                            data-country="{{ current_country }}">
-                                            <option value="">Please select your country...</option>
-                                        </select>
-                                    </div>
-                                </div>
+                <!-- Tab content -->
+                <div class="tab-content" id="setupTabContent">
 
-                                <div class="col-md-3 justify-content-end d-flex">
-                                    <button class="btn btn-secondary submit" type="submit" id="login">
-                                        {{ macro.bi_icon("box-arrow-in-right", "Fetch") }}
-                                    </button>
+                    <!-- ===== ACCOUNT TAB ===== -->
+                    <div class="tab-pane fade show active" id="setup-account" role="tabpanel"
+                        aria-labelledby="setup-account-tab">
+                        <div class="row g-3">
+                            <div class="col-xl-7">
+                                <form action="{{ url_for('app_api_ankerctl_config_login') }}" method="POST" class="mb-3"
+                                    id="config-login-form">
+                                    <div class="card">
+                                        <div class="card-header fs-4">
+                                            Fetch Config From AnkerMake Server
+                                        </div>
+
+                                        <div class="card-body">
+                                            <div class="row mb-3 g-3">
+                                                <div class="input-group">
+                                                    <div class="input-group-text">Email</div>
+                                                    <input class="form-control" type="email" id="loginEmail"
+                                                        name="login_email" required aria-required="true"
+                                                        value="{{ config_existing_email }}" />
+                                                </div>
+                                            </div>
+                                            <div class="row mb-3 g-3">
+                                                <div class="input-group">
+                                                    <div class="input-group-text">Password</div>
+                                                    <input class="form-control" type="password" id="loginPassword"
+                                                        name="login_password" required aria-required="true" />
+                                                </div>
+                                            </div>
+                                            <div class="row mb-3 g-3" id="captchaRow">
+                                                <div class="input-group">
+                                                    <div class="input-group-text text-danger-emphasis">Please solve
+                                                        CAPTCHA:</div>
+                                                    <img id="loginCaptchaImg" />
+                                                    <div class="input-group-text print-info-label">
+                                                        {{ macro.bi_icon("arrow-right") }}
+                                                    </div>
+                                                    <input type="hidden" id="loginCaptchaId" name="login_captcha_id"
+                                                        autocomplete="off" value="" />
+                                                    <input class="form-control" id="loginCaptchaText"
+                                                        name="login_captcha_text" autocomplete="off" value="" />
+                                                </div>
+                                            </div>
+                                            <div class="row g-3 justify-content-between">
+                                                <div class="col-md-8">
+                                                    <div class="input-group">
+                                                        <div class="input-group-text">Country</div>
+                                                        <select class="form-select" id="loginCountry"
+                                                            name="login_country" aria-label="Region"
+                                                            data-countrycodes="{{ country_codes }}"
+                                                            data-country="{{ current_country }}">
+                                                            <option value="">Please select your country...</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-md-3 justify-content-end d-flex">
+                                                    <button class="btn btn-secondary submit" type="submit" id="login">
+                                                        {{ macro.bi_icon("box-arrow-in-right", "Fetch") }}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="form-text mt-3">
+                                                A successful login shows a green confirmation banner with the account
+                                                email and printer count.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </form>
+                                <div class="card mb-3">
+                                    <div class="card-header fs-4">
+                                        Import From eufyMake Studio
+                                    </div>
+
+                                    <div class="card-body">
+                                        <div class="alert alert-info small mb-3">
+                                            Keep eufyMake Studio open and signed in before running this import.
+                                            ankerctl will automatically open the correct slicer cache file and import
+                                            from it. A successful import shows a green confirmation banner with the
+                                            account email and printer count.
+                                        </div>
+                                        <form action="{{ url_for('app_api_ankerctl_config_import_slicer') }}"
+                                            method="POST" class="mb-3">
+                                            <button class="btn btn-primary submit" type="submit" id="importFromSlicer">
+                                                {{ macro.bi_icon("magic", "Import From eufyMake Studio") }}
+                                            </button>
+                                        </form>
+
+                                        <hr>
+
+                                        <div class="small text-body-secondary mb-2">
+                                            Manual fallback:
+                                        </div>
+                                        <form action="{{ url_for('app_api_ankerctl_config_upload') }}" method="POST"
+                                            enctype="multipart/form-data" id="config-upload-form">
+                                            <div class="input-group">
+                                                <input class="form-control" type="file" id="loginFile" name="login_file"
+                                                    required aria-required="true" />
+                                                <button class="btn btn-secondary submit" type="submit" id="upload">
+                                                    {{ macro.bi_icon("cloud-arrow-up-fill", "Upload File") }}
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </div>
+
+                                    <div class="card-footer mt-2">
+                                        <div class="mb-2">
+                                            Location: <code id="loginFilePath"
+                                                class="fw-lighter">{{ login_file_path }}</code>
+                                            {{ macro.clipboard_button("#loginFilePath") }}
+                                        </div>
+                                        <div class="small text-body-secondary">
+                                            For current Windows eufyMake Studio builds, keep the slicer open and
+                                            signed in while importing. If you browse manually, select one of the
+                                            <code>.ldb</code> files from the folder shown above.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-xl-5">
+                                <div class="card">
+                                    <div class="card-header fs-4">
+                                        AnkerMake M5 Config
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <pre class="p-3 m-0" id="ankerctl-settings">{{ anker_config }}</pre>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                </form>
 
-                {% if printer %}
-                <form
-                    action="{{ url_for('app_api_ankerctl_config_update_ip_addresses') }}"
-                    method="POST"
-                    class="mb-3"
-                    id="config-update-printer-ips"
-                    data-bs-toggle="modal" data-bs-target="#popupModal"
-                    data-msg="Detecting printer IP addresses..."
-                >
-                    <div class="card">
-                        <div class="card">
-                            <div class="card-header fs-4">
-                                Update Printer IP Addresses
+                    <!-- ===== PRINTER TAB ===== -->
+                    <div class="tab-pane fade" id="setup-printer-pane" role="tabpanel"
+                        aria-labelledby="setup-printer-tab">
+                        <div class="row g-3">
+                            <div class="col-lg-6">
+                                <div class="card">
+                                    <div class="card-header fs-4">
+                                        Reload Ankerctl Services
+                                    </div>
+                                    <div class="card-body">
+                                        <p>
+                                            If you are experiencing issues with printing or viewing the video feed
+                                            reloading
+                                            the Ankerctl services will often resolve these issues.
+                                        </p>
+                                        <button id="reload" type="button" class="btn btn-danger" data-bs-toggle="modal"
+                                            data-bs-target="#popupModal"
+                                            data-href="{{ url_for('app_api_ankerctl_server_reload') }}">
+                                            {{ macro.bi_icon("bootstrap-reboot", "Reload Services") }}
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="card-body">
-                                <p>
-                                    Make sure your printers are connected to your Wifi and
-                                    are located in the same network as Ankerctl.
-                                </p>
-                                <button class="btn btn-secondary submit" type="submit">
-                                    {{ macro.bi_icon("arrow-clockwise", "Update Printer IP Addresses") }}
+                            <div class="col-lg-6">
+                                <div class="card">
+                                    <div class="card-header fs-4">
+                                        Upload Speed
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row g-3 align-items-center">
+                                            <div class="col-12">
+                                                <select class="form-select" id="upload-rate">
+                                                    {% for rate in upload_rate_choices %}
+                                                    <option value="{{ rate }}" {% if upload_rate_mbps==rate %}selected{%
+                                                        endif %}>
+                                                        {{ rate }} Mbps
+                                                    </option>
+                                                    {% endfor %}
+                                                </select>
+                                                {% if upload_rate_env %}
+                                                <div class="form-text text-warning">
+                                                    Effective rate is forced by environment:
+                                                    <code>UPLOAD_RATE_MBPS={{ upload_rate_env }}</code>.
+                                                    Saved config value is
+                                                    <code>{{ upload_rate_config }} Mbps</code>.
+                                                </div>
+                                                {% else %}
+                                                <div class="form-text">Effective rate: <code>{{ upload_rate_mbps }} Mbps</code> from {{ upload_rate_source }}.</div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6">
+                                <div class="card h-100">
+                                    <div class="card-header fs-4">
+                                        Refresh Printer IP
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="mb-2">
+                                            Broadcast a LAN search for configured printers and save any matching IP
+                                            updates into <code>default.json</code>.
+                                        </p>
+                                        {% if printer %}
+                                        <p class="mb-3 small text-body-secondary">
+                                            Active printer:
+                                            <strong>{{ printer.name }}</strong><br>
+                                            Saved IP:
+                                            <code id="printer-ip-display">{{ printer.ip_addr or "not set" }}</code>
+                                        </p>
+                                        {% endif %}
+                                        <div class="d-flex gap-2 align-items-center flex-wrap">
+                                            <button id="printer-lan-search-btn" type="button" class="btn btn-secondary">
+                                                {{ macro.bi_icon("router", "Find Printer on LAN") }}
+                                            </button>
+                                            <span id="printer-lan-search-result" class="small text-body-secondary"></span>
+                                        </div>
+                                        <div class="form-text mt-2">
+                                            If the saved IP changed, use “Reload Services” afterwards to reconnect with
+                                            the updated address.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-6">
+                                <div class="card h-100">
+                                    <div class="card-header fs-4">
+                                        Hotend
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="printer-all-metal-hotend">
+                                            <label class="form-check-label" for="printer-all-metal-hotend">
+                                                All-Metal Hotend (raises nozzle limit to 300°C)
+                                            </label>
+                                        </div>
+                                        <div class="form-text">Per-printer setting. Stock hotend limit is 260°C.</div>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm mt-3" id="printer-save-hotend-btn">
+                                            {{ macro.bi_icon("save") }} Save
+                                        </button>
+                                        <div id="printer-hotend-status" class="text-muted small mt-2"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header fs-4 d-flex justify-content-between align-items-center">
+                                        <span>{{ macro.bi_icon("cpu") }} Printer Settings Snapshot</span>
+                                        <button id="printer-settings-refresh-btn" type="button" class="btn btn-sm btn-outline-primary">
+                                            {{ macro.bi_icon("arrow-clockwise") }} Refresh
+                                        </button>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="printer-settings-summary-status" class="mb-3 text-muted small">
+                                            Reading printer settings...
+                                        </div>
+                                        <div class="row g-3">
+                                            <div class="col-lg-5">
+                                                <div id="printer-settings-highlights" class="vstack gap-2">
+                                                    <div class="text-muted small">No settings loaded yet.</div>
+                                                </div>
+                                            </div>
+                                            <div class="col-lg-7">
+                                                <div id="printer-settings-groups" class="vstack gap-3">
+                                                    <div class="text-muted small">No grouped settings loaded yet.</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="form-text mt-3">
+                                            Read-only snapshot from standard printer reports such as <code>M503</code>, <code>M851</code> and <code>M290 R</code>.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ===== CAMERA TAB ===== -->
+                    <div class="tab-pane fade" id="setup-camera-pane" role="tabpanel"
+                        aria-labelledby="setup-camera-tab">
+                        <div class="row g-3">
+                            <div class="col-lg-7">
+                                <div class="card">
+                                    <div class="card-header fs-4">External Camera Setup</div>
+                                    <div class="card-body">
+                                        <form id="camera-form" class="vstack gap-3">
+                                            <div class="row g-3">
+                                                <div class="col-12">
+                                                    <label class="form-label" for="camera-external-name">External camera label</label>
+                                                    <input class="form-control" type="text" id="camera-external-name"
+                                                        placeholder="Workbench Cam" />
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label class="form-label" for="camera-external-stream-url">External stream URL</label>
+                                                <input class="form-control" type="text" id="camera-external-stream-url"
+                                                    placeholder="rtsp://user:pass@camera-ip:554/stream1" />
+                                                <div class="form-text">
+                                                    Use the main stream if the camera exposes RTSP, MJPEG, or another FFmpeg-readable feed. This drives the live Home preview.
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label class="form-label" for="camera-external-snapshot-url">External snapshot URL</label>
+                                                <input class="form-control" type="text" id="camera-external-snapshot-url"
+                                                    placeholder="http://camera-ip/snapshot.jpg" />
+                                                <div class="form-text">
+                                                    Optional. If your camera provides a direct JPEG snapshot endpoint, use it here for faster still snapshots and fallback capture.
+                                                </div>
+                                            </div>
+                                            <div class="d-flex flex-wrap gap-2">
+                                                <button class="btn btn-primary" type="button" id="camera-save">Save External Camera</button>
+                                            </div>
+                                            <div class="form-text">
+                                                External camera settings are stored per printer, so each printer can use its own feed if needed.
+                                            </div>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-5">
+                                <div class="card h-100">
+                                    <div class="card-header fs-4">Setup Notes</div>
+                                    <div class="card-body small">
+                                        <p class="mb-2">
+                                            External camera support is meant for simple FFmpeg-friendly feeds.
+                                        </p>
+                                        <ul class="mb-3">
+                                            <li>RTSP example: <code>rtsp://user:pass@camera-ip:554/stream1</code></li>
+                                            <li>MJPEG example: <code>http://camera-ip/mjpeg</code></li>
+                                            <li>Snapshot example: <code>http://camera-ip/snapshot.jpg</code></li>
+                                        </ul>
+                                        <p class="mb-2">
+                                            Use the <strong>Home</strong> page to switch between the printer camera and the external feed. Manual snapshots follow the Home source; timelapse can be pinned in <strong>Setup -&gt; Timelapse</strong>.
+                                        </p>
+                                        <p class="mb-0">
+                                            External preview uses the stream URL for live view when configured. Snapshot URLs are optional fallback sources for still captures.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Integration Stream Card -->
+                        <div class="row g-3 mt-0">
+                            <div class="col-lg-7">
+                                <div class="card">
+                                    <div class="card-header fs-4">Printer Integration Stream</div>
+                                    <div class="card-body">
+                                        <div class="vstack gap-3">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="camera-integration-enabled" role="switch">
+                                                <label class="form-check-label" for="camera-integration-enabled">Enable integration endpoint for this printer</label>
+                                            </div>
+                                            <div>
+                                                <label class="form-label" for="camera-integration-stream-url">Stream URL <span class="text-muted small">(MJPEG — Frigate, HA <code>stream_source</code>)</span></label>
+                                                <div class="input-group">
+                                                    <input class="form-control font-monospace small" type="text" id="camera-integration-stream-url" readonly placeholder="Save to generate URL">
+                                                    <button class="btn btn-outline-secondary" type="button" id="camera-integration-copy-stream" title="Copy stream URL">
+                                                        <i class="bi bi-clipboard"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <label class="form-label" for="camera-integration-snapshot-url">Snapshot URL <span class="text-muted small">(JPEG — HA <code>still_image_url</code>)</span></label>
+                                                <div class="input-group">
+                                                    <input class="form-control font-monospace small" type="text" id="camera-integration-snapshot-url" readonly placeholder="Save to generate URL">
+                                                    <button class="btn btn-outline-secondary" type="button" id="camera-integration-copy-snapshot" title="Copy snapshot URL">
+                                                        <i class="bi bi-clipboard"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div id="camera-source-urls-wrap" class="d-none border-top pt-3 vstack gap-2">
+                                                <div class="form-text mb-1">Both a printer camera and an external camera are configured — use these source-specific URLs to access each independently (e.g. in Frigate):</div>
+                                                <div>
+                                                    <label class="form-label small mb-1" for="camera-integration-printer-stream-url">Printer camera <span class="text-muted">(built-in)</span></label>
+                                                    <div class="input-group input-group-sm">
+                                                        <input class="form-control font-monospace" type="text" id="camera-integration-printer-stream-url" readonly>
+                                                        <button class="btn btn-outline-secondary" type="button" id="camera-integration-copy-printer-stream" title="Copy printer stream URL">
+                                                            <i class="bi bi-clipboard"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label class="form-label small mb-1" for="camera-integration-external-stream-url">External camera</label>
+                                                    <div class="input-group input-group-sm">
+                                                        <input class="form-control font-monospace" type="text" id="camera-integration-external-stream-url" readonly>
+                                                        <button class="btn btn-outline-secondary" type="button" id="camera-integration-copy-external-stream" title="Copy external stream URL">
+                                                            <i class="bi bi-clipboard"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="form-text" id="camera-integration-status"></div>
+                                            <div>
+                                                <button class="btn btn-primary" type="button" id="camera-integration-save">Save Integration Stream</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-5">
+                                <div class="card h-100">
+                                    <div class="card-header fs-4">Integration Notes</div>
+                                    <div class="card-body small">
+                                        <p class="mb-2">
+                                            The stream endpoint transcodes the printer camera to MJPEG via ffmpeg.
+                                        </p>
+                                        <p class="mb-1"><strong>Frigate</strong></p>
+                                        <pre class="border rounded p-2 small mb-3 text-body-secondary">cameras:
+  printer:
+    ffmpeg:
+      inputs:
+        - path: &lt;Stream URL&gt;</pre>
+                                        <p class="mb-1"><strong>Home Assistant</strong></p>
+                                        <p class="mb-2">
+                                            When <code>HA_BASE_URL</code> and <code>HA_TOKEN</code> are set
+                                            (Setup &rarr; HA), ankerctl auto-registers an
+                                            <strong>MJPEG IP Camera</strong> on connect and removes it on stop.
+                                        </p>
+                                        <p class="mb-1 text-body-secondary small">Manual fallback: add via
+                                            <em>MJPEG IP Camera</em> integration using the URLs above.</p>
+                                        <p class="mb-0">
+                                            When API-key auth is enabled, both URLs include your key automatically. Requires <code>ffmpeg</code>.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ===== TOOLS TAB ===== -->
+                    <div class="tab-pane fade" id="setup-tools" role="tabpanel" aria-labelledby="setup-tools-tab">
+
+                        <!-- Upper: Auto-Leveling + Bed Level Map -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-lg-5">
+                                <div class="card h-100">
+                                    <div class="card-header fs-4">
+                                        <i class="bi bi-rulers"></i> Auto-Leveling
+                                    </div>
+                                    <div class="card-body">
+                                        <p>
+                                            Start the automatic bed leveling procedure. The printer will probe
+                                            multiple points on the print bed to create a compensation mesh.
+                                        </p>
+                                        <p class="text-warning-emphasis small">
+                                            <i class="bi bi-exclamation-triangle"></i>
+                                            Make sure the print bed is clear before starting.
+                                        </p>
+                                        <button id="auto-level-btn" type="button" class="btn btn-primary">
+                                            <i class="bi bi-rulers"></i> Start Auto-Level
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-7">
+                                <div class="card h-100">
+                                    <div class="card-header fs-4 d-flex justify-content-between align-items-center">
+                                        <span><i class="bi bi-grid-3x3"></i> Bed Level Map</span>
+                                        <div class="d-flex gap-2">
+                                            <button id="bed-level-read-btn" type="button" class="btn btn-sm btn-primary">
+                                                <i class="bi bi-arrow-clockwise"></i> Read
+                                            </button>
+                                            <button id="bed-level-load-last-btn" type="button" class="btn btn-sm btn-outline-primary">
+                                                <i class="bi bi-clock-history"></i> Load Last
+                                            </button>
+                                            <button id="bed-level-save-btn" type="button" class="btn btn-sm btn-outline-secondary" disabled>
+                                                <i class="bi bi-camera"></i> Save Bed Map
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="bed-level-status" class="mb-3"></div>
+                                        <div id="bed-level-grid" style="display:none;">
+                                            <div class="d-flex gap-3 mb-2 small text-muted" id="bed-level-stats"></div>
+                                            <div id="bed-level-map-wrap" style="overflow-x:auto; max-width:100%;">
+                                                <!-- grid table injected by JS -->
+                                            </div>
+                                            <div class="d-flex align-items-center gap-2 mt-3 small">
+                                                <span class="text-muted">Low (neg)</span>
+                                                <div style="
+                                                    flex:1;
+                                                    height:12px;
+                                                    border-radius:4px;
+                                                    background:linear-gradient(to right,
+                                                        rgb(0,0,255),
+                                                        rgb(255,255,255),
+                                                        rgb(255,0,0));
+                                                "></div>
+                                                <span class="text-muted">High (pos)</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header fs-4 d-flex justify-content-between align-items-center">
+                                        <span><i class="bi bi-arrow-down-up"></i> Z-Offset</span>
+                                        <button id="z-offset-refresh-btn" type="button" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-arrow-clockwise"></i> Refresh
+                                        </button>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="row g-3 align-items-end">
+                                            <div class="col-lg-4">
+                                                <label class="form-label" for="z-offset-current">Current</label>
+                                                <div id="z-offset-current" class="form-control bg-body-tertiary">unknown</div>
+                                                <div class="form-text">
+                                                    Live value from MQTT command <code>1021</code> (<code>z_axis_recoup</code>).
+                                                </div>
+                                            </div>
+                                            <div class="col-lg-4">
+                                                <label class="form-label" for="z-offset-target">Absolute target (mm)</label>
+                                                <div class="input-group">
+                                                    <input id="z-offset-target" type="number" class="form-control" step="0.01" min="-2.00" max="2.00" inputmode="decimal" placeholder="0.00">
+                                                    <button id="z-offset-set-btn" type="button" class="btn btn-primary">
+                                                        <i class="bi bi-check2"></i> Set
+                                                    </button>
+                                                </div>
+                                                <div class="form-text">
+                                                    Uses <code>M290</code> and waits for MQTT readback confirmation.
+                                                </div>
+                                            </div>
+                                            <div class="col-lg-4">
+                                                <label class="form-label d-block">Nudge</label>
+                                                <div class="d-flex gap-2 flex-wrap">
+                                                    <button id="z-offset-minus-btn" type="button" class="btn btn-outline-secondary">
+                                                        <i class="bi bi-dash-lg"></i> 0.01
+                                                    </button>
+                                                    <button id="z-offset-plus-btn" type="button" class="btn btn-outline-secondary">
+                                                        <i class="bi bi-plus-lg"></i> 0.01
+                                                    </button>
+                                                </div>
+                                                <div class="form-text">
+                                                    This section is also the future home for build-plate presets with fixed offsets.
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div id="z-offset-status" class="mt-3"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Lower: Compare Bed Maps (full width, independent scroll) -->
+                        <div class="card">
+                            <div class="card-header">
+                                <button class="btn btn-link text-decoration-none p-0 fw-semibold"
+                                    type="button"
+                                    data-bs-toggle="collapse"
+                                    data-bs-target="#bed-compare-body"
+                                    aria-expanded="false"
+                                    aria-controls="bed-compare-body">
+                                    <i class="bi bi-arrow-left-right"></i> Compare Bed Maps
                                 </button>
                             </div>
-                        </div>
-                    </div>
-                </form>
-                {% endif %}
+                            <div class="collapse" id="bed-compare-body">
+                                <div class="card-body">
+                                    <div class="form-text mb-3">
+                                        This tool compares saved bed-level maps from the <code>Bed Level Map</code> card above. Camera snapshots downloaded from Home are separate files and will not appear here.
+                                    </div>
+                                    <div class="row g-3 align-items-end mb-3">
+                                        <div class="col-md-5">
+                                            <label class="form-label small" for="bed-snap-a-select">Bed Map A (Reference)</label>
+                                            <select class="form-select form-select-sm" id="bed-snap-a-select">
+                                                <option value="" disabled selected>No bed maps saved yet</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-5">
+                                            <label class="form-label small" for="bed-snap-b-select">Bed Map B</label>
+                                            <select class="form-select form-select-sm" id="bed-snap-b-select">
+                                                <option value="live">Read live from printer</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <button id="bed-compare-btn" type="button" class="btn btn-sm btn-primary w-100">
+                                                <i class="bi bi-arrow-left-right"></i> Compare
+                                            </button>
+                                        </div>
+                                    </div>
 
-                <form
-                    action="{{ url_for('app_api_ankerctl_config_upload') }}"
-                    method="POST"
-                    enctype="multipart/form-data"
-                    class="mb-3"
-                    id="config-upload-form"
-                >
-                    <div class="card">
-                        <div class="card-header fs-4">
-                            Upload AnkerMake Login File
+                                    <div id="bed-compare-status" class="mb-2"></div>
+
+                                    <div id="bed-compare-result" style="display:none;">
+                                        <div class="bed-compare-scroll">
+                                            <div class="bed-compare-grid">
+                                                <div class="card border-secondary">
+                                                    <div class="card-header small fw-semibold">Bed Map A</div>
+                                                    <div class="card-body p-2">
+                                                        <div id="bed-compare-a-wrap"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="card border-secondary">
+                                                    <div class="card-header small fw-semibold">Diff (B &minus; A)</div>
+                                                    <div class="card-body p-2">
+                                                        <div id="bed-compare-diff-wrap"></div>
+                                                        <div id="bed-compare-diff-stats" class="mt-2 small text-muted"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="card border-secondary">
+                                                    <div class="card-header small fw-semibold">Bed Map B</div>
+                                                    <div class="card-body p-2">
+                                                        <div id="bed-compare-b-wrap"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <hr class="mt-4">
+                                    <h6 class="small fw-semibold text-muted mb-2">Saved Bed Maps</h6>
+                                    <div id="bed-snap-list" class="vstack gap-1">
+                                        <span class="text-muted small">No bed maps saved yet.</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="card-body input-group">
-                            <input
-                                class="form-control"
-                                type="file"
-                                id="loginFile"
-                                name="login_file"
-                                required
-                                aria-required="true"
-                            />
-                            <button class="btn btn-secondary submit" type="submit" id="upload">
-                                {{ macro.bi_icon("cloud-arrow-up-fill", "Upload") }}
-                            </button>
-                        </div>
+                    </div>
 
-                        <div class="card-footer mt-2">
-                            Location: <code id="loginFilePath" class="fw-lighter">{{ login_file_path }}</code>
-                            {{ macro.clipboard_button("#loginFilePath") }}
+                    <!-- ===== LAUNCHER TAB ===== -->
+                    <div class="tab-pane fade" id="setup-launcher-pane" role="tabpanel"
+                        aria-labelledby="setup-launcher-tab">
+                        <div class="row g-3">
+                            <div class="col-lg-7">
+                                <div class="card">
+                                    <div class="card-header fs-4">Windows Launcher</div>
+                                    <div class="card-body">
+                                        <div class="vstack gap-3">
+                                            <div>
+                                                <label class="form-label" for="launcher-install-dir">Ankerctl folder</label>
+                                                <input class="form-control" type="text" id="launcher-install-dir"
+                                                    value="{{ ankerctl_root }}"
+                                                    placeholder="C:\Users\YourName\Documents\GitHub\ankermake-m5-protocol" />
+                                                <div class="form-text">
+                                                    Enter the folder that contains <code>ankerctl.py</code>. The downloaded batch file will launch from this folder.
+                                                </div>
+                                            </div>
+                                            <div class="d-flex flex-wrap gap-2">
+                                                <button class="btn btn-primary" type="button" id="launcher-download-btn">
+                                                    {{ macro.bi_icon("download") }} Download Launcher .bat
+                                                </button>
+                                            </div>
+                                            <div class="form-text">
+                                                This launcher uses your path, changes into that folder, and runs <code>python .\ankerctl.py webserver run</code>.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-lg-5">
+                                <div class="card h-100">
+                                    <div class="card-header fs-4">How To Use It</div>
+                                    <div class="card-body small">
+                                        <ol class="mb-3">
+                                            <li>Confirm the Ankerctl folder path.</li>
+                                            <li>Download the batch file.</li>
+                                            <li>Place it wherever you want on your PC.</li>
+                                            <li>Double-click it to start Ankerctl.</li>
+                                        </ol>
+                                        <p class="mb-2">
+                                            The batch file is generated specifically from the path you enter here, so you do not have to edit it afterward.
+                                        </p>
+                                        <p class="mb-0">
+                                            If you move the Ankerctl folder later, just come back here and download a fresh launcher.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </form>
 
-                <div class="card">
-                    <div class="card">
-                        <div class="card-header fs-4">
-                            Reload Ankerctl Services
+                    <!-- ===== NOTIFICATIONS TAB ===== -->
+                    <div class="tab-pane fade" id="setup-notifications-pane" role="tabpanel"
+                        aria-labelledby="setup-notifications-tab">
+                        <div class="card">
+                            <div class="card-header fs-4">
+                                Notifications
+                            </div>
+                            <div class="card-body">
+                                <form id="apprise-form" class="vstack gap-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                            id="apprise-enabled" />
+                                        <label class="form-check-label" for="apprise-enabled">Enable Apprise
+                                            notifications</label>
+                                    </div>
+
+                                    <div class="row g-3">
+                                        <div class="col-lg-7">
+                                            <label class="form-label" for="apprise-server-url">Apprise server
+                                                URL</label>
+                                            <input class="form-control" type="text" id="apprise-server-url"
+                                                placeholder="http://apprise:8000" />
+                                        </div>
+                                        <div class="col-lg-5 col-md-6">
+                                            <label class="form-label" for="apprise-tag">Tag (filter)</label>
+                                            <input class="form-control" type="text" id="apprise-tag"
+                                                placeholder="optional" />
+                                            <div class="form-text">Only URLs with this tag will receive notifications.
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <details class="mt-2">
+                                        <summary class="text-muted small">Advanced: Apprise key</summary>
+                                        <div class="row g-3 mt-1">
+                                            <div class="col-lg-4 col-md-6">
+                                                <label class="form-label" for="apprise-key">Key</label>
+                                                <input class="form-control" type="text" id="apprise-key"
+                                                    placeholder="ankerctl" />
+                                                <div class="form-text">Used for <code>/notify/&lt;key&gt;</code> on the
+                                                    Apprise server.</div>
+                                            </div>
+                                        </div>
+                                    </details>
+
+                                    <div>
+                                        <div class="fw-semibold">Events</div>
+                                        <div class="row g-2 mt-1">
+                                            <div class="col-md-6">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox"
+                                                        id="apprise-event-print-started" />
+                                                    <label class="form-check-label"
+                                                        for="apprise-event-print-started">Print started</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox"
+                                                        id="apprise-event-print-finished" />
+                                                    <label class="form-check-label"
+                                                        for="apprise-event-print-finished">Print finished</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox"
+                                                        id="apprise-event-print-failed" />
+                                                    <label class="form-check-label"
+                                                        for="apprise-event-print-failed">Print failed</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox"
+                                                        id="apprise-event-gcode-uploaded" />
+                                                    <label class="form-check-label"
+                                                        for="apprise-event-gcode-uploaded">Upload complete</label>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox"
+                                                        id="apprise-event-print-progress" />
+                                                    <label class="form-check-label"
+                                                        for="apprise-event-print-progress">Print progress</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="row g-3 align-items-end">
+                                        <div class="col-md-4">
+                                            <label class="form-label" for="apprise-progress-interval">Progress interval
+                                                (%)</label>
+                                            <input class="form-control" type="number" min="1" max="100" step="1"
+                                                id="apprise-progress-interval" />
+                                        </div>
+                                        {% if video_supported %}
+                                        <div class="col-md-4">
+                                            <label class="form-label" for="apprise-snapshot-quality">Snapshot
+                                                quality</label>
+                                            <select class="form-select" id="apprise-snapshot-quality">
+                                                <option value="hd">HD (720p)</option>
+                                                <option value="fhd">FHD (1080p)</option>
+                                            </select>
+                                        </div>
+                                        {% endif %}
+                                        <div class="col-md-4">
+                                            <div class="form-check form-switch mt-4">
+                                                <input class="form-check-input" type="checkbox" role="switch"
+                                                    id="apprise-progress-image" />
+                                                <label class="form-check-label" for="apprise-progress-image">Include
+                                                    image when available</label>
+                                            </div>
+                                            {% if video_supported %}
+                                            <div class="form-check form-switch mt-2">
+                                                <input class="form-check-input" type="checkbox" role="switch"
+                                                    id="apprise-snapshot-light" />
+                                                <label class="form-check-label" for="apprise-snapshot-light">Light on
+                                                    snapshot</label>
+                                            </div>
+                                            {% endif %}
+                                            <div class="form-check form-switch mt-2">
+                                                <input class="form-check-input" type="checkbox" role="switch"
+                                                    id="apprise-snapshot-fallback" />
+                                                <label class="form-check-label" for="apprise-snapshot-fallback">Fallback
+                                                    to preview image</label>
+                                            </div>
+                                            <div class="form-text">Live snapshots are preferred; fallback uses the GCODE
+                                                preview.</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex flex-wrap gap-2">
+                                        <button class="btn btn-primary" type="button" id="apprise-save">Save</button>
+                                        <button class="btn btn-secondary" type="button" id="apprise-test">Send
+                                            test</button>
+                                    </div>
+                                    <div class="form-text">
+                                        Apprise posts to <code>/notify/&lt;key&gt;</code>. Leave tag empty to notify all
+                                        URLs under the key.
+                                    </div>
+                                    <div class="form-text">Environment variables (<code>APPRISE_*</code>) override these
+                                        values.</div>
+                                </form>
+                            </div>
                         </div>
-                        <div class="card-body">
-                            <p>
-                                If you are experiencing issues with printing or viewing the video feed reloading
-                                the Ankerctl services will often resolve these issues.
-                            </p>
-                            <button id="reload" type="button" class="btn btn-danger"
-                                    data-bs-toggle="modal" data-bs-target="#popupModal"
-                                    data-msg="Restarting ankerctl..."
-                                    data-href="{{ url_for('app_api_ankerctl_server_reload') }}">
-                                {{ macro.bi_icon("bootstrap-reboot", "Reload Services") }}
-                            </button>
+                    </div>
+
+                    <!-- ===== TIMELAPSE TAB ===== -->
+                    <div class="tab-pane fade" id="setup-timelapse-pane" role="tabpanel"
+                        aria-labelledby="setup-timelapse-tab">
+                        <div class="card">
+                            <div class="card-header fs-4">Timelapse</div>
+                            <div class="card-body">
+                                <form id="timelapse-form" class="vstack gap-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                            id="timelapse-enabled" />
+                                        <label class="form-check-label" for="timelapse-enabled">Enable Timelapse</label>
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label" for="timelapse-interval">Interval
+                                                (seconds)</label>
+                                            <input class="form-control" type="number" id="timelapse-interval" min="1"
+                                                value="10" />
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label" for="timelapse-max-videos">Max retained
+                                                videos</label>
+                                            <input class="form-control" type="number" id="timelapse-max-videos" min="1"
+                                                value="50" />
+                                        </div>
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                            id="timelapse-persistent" checked />
+                                        <label class="form-check-label" for="timelapse-persistent">Save persistently (to
+                                            disk)</label>
+                                    </div>
+                                    <div>
+                                        <label class="form-label" for="timelapse-camera-source">Timelapse camera source</label>
+                                        <select class="form-select" id="timelapse-camera-source">
+                                            <option value="follow">Follow Home camera selection</option>
+                                            <option value="printer">Printer camera</option>
+                                            <option value="external">External camera</option>
+                                        </select>
+                                        <div class="form-text">
+                                            Pin timelapse to a camera so the Home page viewer can switch feeds without changing capture.
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label class="form-label" for="timelapse-light">Light control</label>
+                                        <select class="form-select" id="timelapse-light">
+                                            <option value="">Off (no light control)</option>
+                                            <option value="snapshot">Per snapshot (on → snap → off)</option>
+                                            <option value="session">Whole session (on at start, off at end)</option>
+                                        </select>
+                                    </div>
+                                    <button class="btn btn-primary" type="button" id="timelapse-save">Save</button>
+                                    <div class="form-text">Environment variables override these values if set.</div>
+                                </form>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
-            <div class="col-lg-6">
-                <div class="card">
-                    <div class="card-header fs-4">
-                        AnkerMake M5 Config
+
+                    <!-- ===== MQTT / HOME ASSISTANT TAB ===== -->
+                    <div class="tab-pane fade" id="setup-mqtt-pane" role="tabpanel" aria-labelledby="setup-mqtt-tab">
+                        <div class="card">
+                            <div class="card-header fs-4">Home Assistant (MQTT)</div>
+                            <div class="card-body">
+                                <form id="mqtt-form" class="vstack gap-3">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" role="switch"
+                                            id="mqtt-enabled" />
+                                        <label class="form-check-label" for="mqtt-enabled">Enable Home Assistant
+                                            Discovery</label>
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-md-8">
+                                            <label class="form-label" for="mqtt-host">Broker Host</label>
+                                            <input class="form-control" type="text" id="mqtt-host"
+                                                placeholder="homeassistant.local" />
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label" for="mqtt-port">Broker Port</label>
+                                            <input class="form-control" type="number" id="mqtt-port"
+                                                placeholder="1883" />
+                                        </div>
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <label class="form-label" for="mqtt-user">Username</label>
+                                            <input class="form-control" type="text" id="mqtt-user" autocomplete="off" />
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="form-label" for="mqtt-password">Password</label>
+                                            <input class="form-control" type="password" id="mqtt-password"
+                                                autocomplete="off" />
+                                        </div>
+                                    </div>
+                                    <div class="row g-3">
+                                        <div class="col-md-12">
+                                            <label class="form-label" for="mqtt-prefix">Discovery Prefix</label>
+                                            <input class="form-control" type="text" id="mqtt-prefix"
+                                                placeholder="homeassistant" />
+                                        </div>
+                                    </div>
+
+                                    <hr class="my-3">
+
+                                    <div class="fw-semibold">Home Assistant API (optional)</div>
+                                    <div class="row g-3">
+                                        <div class="col-md-7">
+                                            <label class="form-label" for="ha-api-base-url">HA Base URL</label>
+                                            <input class="form-control" type="text" id="ha-api-base-url"
+                                                placeholder="http://homeassistant.local:8123"
+                                                autocomplete="off" />
+                                        </div>
+                                        <div class="col-md-5">
+                                            <label class="form-label" for="ha-api-token">HA Token</label>
+                                            <input class="form-control" type="password" id="ha-api-token"
+                                                placeholder="Long-lived access token"
+                                                autocomplete="off" />
+                                        </div>
+                                    </div>
+                                    <div class="form-text">
+                                        When set, ankerctl automatically registers an MJPEG IP Camera in
+                                        Home Assistant. Get a token from HA &rarr; Profile &rarr; Long-Lived
+                                        Access Tokens.
+                                    </div>
+                                    <div class="form-text" id="ha-api-status"></div>
+
+                                    <button class="btn btn-primary" type="button" id="mqtt-save">Save & Restart
+                                        Service</button>
+                                    <div class="form-text">Requires restart of MQTT service (automatic). Environment
+                                        variables override.</div>
+                                </form>
+                            </div>
+                        </div>
                     </div>
-                    <div class="card-body p-0">
-                        <pre class="p-3 m-0" id="ankerctl-settings">{{ anker_config }}</pre>
-                    </div>
+
                 </div>
             </div>
         </div>
