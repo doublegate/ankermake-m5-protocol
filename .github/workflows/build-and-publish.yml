@@ -6,9 +6,9 @@ on:
      - v**
     branches:
       - 'upcoming/*'
-      - 'master'
+      - 'main'
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
      
 env:
   REGISTRY: ghcr.io
@@ -51,9 +51,9 @@ jobs:
       with:
         images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         flavor: |
-          latest=${{ github.ref == 'refs/heads/master' }}
+          latest=${{ github.ref == 'refs/heads/main' }}
         tags: |
-          type=raw,value=latest,enable=${{ github.ref == 'refs/heads/master' }}
+          type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
           type=edge,value=edge,enable=${{ startsWith(github.ref, 'refs/heads/upcoming/') }}
           type=raw,value=upcoming,enable=${{ startsWith(github.ref, 'refs/heads/upcoming/') }}
           type=ref,event=tag
