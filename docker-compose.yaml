@@ -1,6 +1,6 @@
 services:
     ankerctl:
-        image: anselor/ankerctl:exile-latest
+        image: ghcr.io/doublegate/ankermake-m5-protocol:latest
         container_name: ankerctl
         restart: unless-stopped
         build: .

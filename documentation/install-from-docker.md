@@ -37,9 +37,9 @@
 To start `ankerctl` using docker compose on your local machine, run:
 
 ```sh
-curl -O https://raw.githubusercontent.com/anselor/ankermake-m5-protocol/exiles/docker-compose.yaml
-curl -O https://raw.githubusercontent.com/anselor/ankermake-m5-protocol/exiles/compose.sh
-curl -O https://raw.githubusercontent.com/anselor/ankermake-m5-protocol/exiles/.env
+curl -O https://raw.githubusercontent.com/doublegate/ankermake-m5-protocol/main/docker-compose.yaml
+curl -O https://raw.githubusercontent.com/doublegate/ankermake-m5-protocol/main/compose.sh
+curl -O https://raw.githubusercontent.com/doublegate/ankermake-m5-protocol/main/.env
 docker-compose pull
 ./compose.sh up
 ```
@@ -48,9 +48,9 @@ docker-compose pull
 To start `ankerctl` usinge docker compose as a daemon service running on another system:
 
 ```sh
-curl -O https://raw.githubusercontent.com/anselor/ankermake-m5-protocol/exiles/docker-compose.yaml
-curl -O https://raw.githubusercontent.com/anselor/ankermake-m5-protocol/exiles/compose.sh
-curl -O https://raw.githubusercontent.com/anselor/ankermake-m5-protocol/exiles/.env
+curl -O https://raw.githubusercontent.com/doublegate/ankermake-m5-protocol/main/docker-compose.yaml
+curl -O https://raw.githubusercontent.com/doublegate/ankermake-m5-protocol/main/compose.sh
+curl -O https://raw.githubusercontent.com/doublegate/ankermake-m5-protocol/main/.env
 docker-compose pull
 ./compose.sh -o up -d
 ```
