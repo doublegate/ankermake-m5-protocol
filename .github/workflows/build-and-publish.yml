@@ -7,8 +7,24 @@ on:
     branches:
       - 'upcoming/*'
       - 'main'
+    paths-ignore:
+      - '**.md'
+      - 'documentation/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.gitattributes'
+      - '.editorconfig'
+      - '.vscode/**'
   pull_request:
     branches: [ main ]
+    paths-ignore:
+      - '**.md'
+      - 'documentation/**'
+      - 'LICENSE'
+      - '.gitignore'
+      - '.gitattributes'
+      - '.editorconfig'
+      - '.vscode/**'
   workflow_dispatch:
      
 env:
