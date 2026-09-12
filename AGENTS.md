@@ -87,11 +87,19 @@
   life of the anselor fork no push to the default branch ever built an image or cut a release.
   Retargeted to `main` in 4 places (push trigger, PR trigger, and the two `latest` tag conditions).
   When inheriting upstream workflow changes, re-check this — a merge can reintroduce `master`.
-- **The `ghcr.io/doublegate/ankermake-m5-protocol:latest` image does not exist until the first
-  push to `main`** builds it. `docker-compose.yaml` points at it (it used to point at
-  `anselor/ankerctl:exile-latest` on Docker Hub), so the documented `docker compose up` path stays
-  broken until then. GHCR also defaults new packages to **private** — it must be made public or
-  anonymous pulls fail.
+- **`ghcr.io/doublegate/ankermake-m5-protocol:latest` is published on every push to `main`** and
+  the package is public, so the documented `docker compose up` works. (It used to point at
+  `anselor/ankerctl:exile-latest` on Docker Hub, i.e. the intermediate fork's build.)
+- **A forked repo suppresses Actions behind a one-time acknowledgement banner** in the Actions tab,
+  and no API clears it: `actions/permissions` reports `enabled: true` and `gh workflow enable`
+  exits clean while the gate is still shut. The only reliable signal is `total_count: 0` from
+  `gh api repos/OWNER/REPO/actions/runs`. If CI seems not to fire on a fork, check that first.
+- **Release steps are gated on `startsWith(github.ref, 'refs/tags/')`, not on the push event.**
+  `antonyurchenko/git-release` FATALs unless `GITHUB_REF` matches `refs/tags/vX.Y.Z`, so the
+  original `event_name == 'push'` guard failed every branch push, and the two archive steps
+  silently built `ankerctl-main.zip`/`.tar.gz` for a release that could not exist. Current
+  behavior: push to `main` or `workflow_dispatch` -> build + publish image only; a `v*` tag ->
+  build + publish + archives + GitHub release; PR -> build only, no registry login.
 
 ### Where things live
 
