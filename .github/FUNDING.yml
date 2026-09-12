@@ -1,4 +1,9 @@
-# These are supported funding model platforms
+# These are supported funding model platforms.
+#
+# NOTE: these deliberately still point at Django1982 (Daniel Heinen), the upstream
+# maintainer whose work this fork is built on. Sponsoring here supports the person
+# actually developing the features, not this fork's maintainer. Change them only if
+# you intend to solicit sponsorship for this fork's own work.
 
 github: Django1982 # Replace with up to 4 GitHub Sponsors-enabled usernames e.g., [user1, user2]
 patreon: # Replace with a single Patreon username

@@ -12,7 +12,7 @@ ankerctl is a web UI and CLI for monitoring and controlling AnkerMake M5 3D prin
 
 1. In Home Assistant, go to **Settings → Add-ons → Add-on Store**.
 2. Click the three-dot menu (top right) and select **Repositories**.
-3. Add the repository URL: `https://github.com/Django1982/ankermake-m5-protocol`
+3. Add the repository URL: `https://github.com/doublegate/ankermake-m5-protocol`
 4. Click **Add**, then close the dialog. The **ankerctl** addon will appear in the store.
 5. Click **ankerctl**, then **Install**.
 6. Configure the addon options (see table below). At minimum, leave defaults — you can configure credentials after first start via the web UI.

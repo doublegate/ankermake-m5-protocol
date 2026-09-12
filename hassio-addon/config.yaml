@@ -2,7 +2,7 @@ name: ankerctl
 version: "1.11.1"
 slug: ankerctl
 description: Web UI and control interface for AnkerMake M5 3D printers
-url: https://github.com/Django1982/ankermake-m5-protocol
+url: https://github.com/doublegate/ankermake-m5-protocol
 arch:
   - aarch64
   - amd64

@@ -86,4 +86,4 @@ Allow the LAN PPPP port:
 sudo ufw allow in proto udp to any port 32108
 ```
 
-This single rule covers both LAN discovery (broadcast) and the LAN session — both sockets bind locally to UDP `32108` since the fix for [issue #77](https://github.com/Django1982/ankermake-m5-protocol/issues/77). For the full background see the **Firewall / ufw** section in the main [README](../README.md#firewall--ufw).
+This single rule covers both LAN discovery (broadcast) and the LAN session — both sockets bind locally to UDP `32108` since the fix for [issue #77](https://github.com/Django1982/ankermake-m5-protocol/issues/77). For the full background see the **Networking and firewalls** section in the main [README](../README.md#networking-and-firewalls).
