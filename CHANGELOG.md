@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+Every release below is the work of the upstream
+[`Django1982/ankermake-m5-protocol`](https://github.com/Django1982/ankermake-m5-protocol)
+line and is preserved here unchanged, including its issue and PR links, which continue to
+point at that repository. See "Lineage and attribution" in the README.
+
+## [Unreleased]
+
+### Changed — fork maintenance
+
+This fork (`doublegate/ankermake-m5-protocol`) adopted the Django1982 tree as its baseline
+on 2026-09-12, replacing its previous `anselor` ancestry. No functional change to `ankerctl`
+or `libflagship`; the suite was verified green at the adoption point (519 passed, 15 skipped).
+
+ - Rewrote `README.md` around the upstream documentation: restructured task-first, with
+   grouped capability tables and collapsible sections, full fork lineage, and attribution to
+   Daniel Heinen ([@Django1982](https://github.com/Django1982)) for the functionality it
+   documents.
+ - Retargeted this fork's own identity links — `repository.yaml`, `hassio-addon/config.yaml`,
+   `hassio-addon/README.md`, `static/footer.html`, `static/tabs/instructions.html`, and the
+   issue template. Citations of upstream issues and PRs were deliberately left pointing
+   upstream.
+ - Added `login.json` / `*.login.json` to `.gitignore`. The account file the import flow
+   reads was not covered, and its `user_id` authenticates to the MQTT broker.
+ - Corrected `AGENTS.md`, which claimed the repository had no automated test suite, and
+   recorded the fork's lineage, remotes, and codegen/credential pitfalls.
+
 ## [1.0.0] - 2026-04-13
 
 ### Added

@@ -24,9 +24,13 @@
 - No enforced formatter or linter is configured; keep diffs tight and readable.
 
 ## Testing Guidelines
-- There is no automated test suite in this repo today.
-- Validate changes manually using the CLI (`./ankerctl.py ...`) and web UI.
-- For protocol changes, use scripts in `examples/` to reproduce behavior.
+- There **is** an automated test suite: `tests/` (31 modules). Run `make check`
+  (`compileall` + `pytest`) — the same gate CI runs across Python 3.10 and 3.13.
+  Verified green at the fork point: 519 passed, 15 skipped.
+- Add or adjust tests with the change; for accuracy-critical paths, write the failing
+  test first.
+- Also validate manually via the CLI (`./ankerctl.py ...`) and web UI where behavior is
+  interactive; for protocol changes, the scripts in `examples/` reproduce behavior.
 
 ## Commit & Pull Request Guidelines
 - Git history uses short, descriptive commit messages (sentence case, sometimes with issue IDs).
@@ -36,3 +40,32 @@
 ## Configuration & Security Notes
 - Config is stored under `~/.config/ankerctl` (or the container volume).
 - `login.json` contains sensitive data; never commit it or paste it in issues.
+
+## Fork Context
+
+This repository is `doublegate/ankermake-m5-protocol`, a fork that **adopted the
+`Django1982/ankermake-m5-protocol` tree as its baseline** (2026-09-12). It previously
+descended from `anselor/ankermake-m5-protocol` (the "exiles" line); both are forks of the
+original `Ankermgmt/ankermake-m5-protocol` by Christian Iversen. GPL-3.0 throughout —
+upstream copyright notices must be preserved. See README "Lineage and attribution".
+
+Remotes: `origin` = doublegate, `django` = Django1982 (the tracked upstream),
+`upstream` = anselor (historical). What this fork changed:
+`git log --oneline django/master..HEAD`.
+
+Things that bite when working here:
+
+- **Default branch is `main`, upstream's is `master`.** `ci.yml` already triggers on both,
+  so it works either way — but check this after any merge from upstream.
+- **Some of `libflagship/` is generated, not hand-written.** `pppp.py`, `mqtt.py` and
+  `amtypes.py` come from `specification/*.stf` via transwarp (`make update`, `make diff`
+  to preview). Editing them directly is undone by the next codegen run. `transwarp/` is a
+  submodule — a clone without `--recursive` leaves it empty and `make update` fails.
+- **Flask's `template_folder` is `static/`, not `templates/`.** Root `templates/` holds
+  transwarp codegen templates exclusively and has nothing to do with Flask.
+- **Links to `Django1982/...` issues and PRs in CHANGELOG.md and
+  `documentation/issue77_code_fix.md` are citations and must stay pointing upstream.**
+  Retargeting them to this fork would produce dead links and misattribute the work.
+  `.github/FUNDING.yml` likewise still points at the upstream maintainer, deliberately.
+- **`login.json` is credential material** — its `user_id` works as the MQTT password. It is
+  gitignored here; never commit one or paste `config show` output into an issue.

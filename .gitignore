@@ -12,6 +12,12 @@ dump/
 .env
 .env.*
 !.env.example
+
+# AnkerMake account credentials. `ankerctl config import` reads login.json and the
+# docs walk users through placing it next to the tool; its user_id authenticates to
+# the MQTT broker and works as a password.
+login.json
+*.login.json
 .claude/
 .claude-backup-20260324-132505/
 .claude-flow/
