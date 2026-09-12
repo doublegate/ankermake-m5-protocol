@@ -1,5 +1,38 @@
+# --- Original upstream entries -------------------------------------------
 *~
 __pycache__
 .DS_Store
 /settings.json
 .idea/
+
+# --- Credentials and captured traffic ------------------------------------
+# `ankerctl config import` reads AnkerMake's login.json, and the docs tell you
+# to copy it next to the tool. It contains the account user_id, which works as
+# an MQTT password. Never commit it.
+login.json
+*.login.json
+
+# `--pppp-dump <file.log>` writes raw protocol captures, which include printer
+# DUIDs and session material.
+*.log
+
+# --- Python --------------------------------------------------------------
+*.py[cod]
+*.egg-info/
+.eggs/
+.venv/
+venv/
+env/
+ENV/
+
+# --- PyInstaller (build-exe.bat) -----------------------------------------
+/build/
+/dist/
+*.spec
+
+# --- CI release staging (see .github/workflows/build-and-publish.yml) -----
+/release/
+
+# --- OS / editor ---------------------------------------------------------
+Thumbs.db
+*.swp
